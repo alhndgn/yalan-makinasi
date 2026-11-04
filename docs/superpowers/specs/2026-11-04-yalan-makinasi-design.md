@@ -141,7 +141,7 @@ yalan-makinasi/
 │  │  └─ providers/    # template.ts | ollama.ts | openrouter.ts + index.ts
 │  ├─ server/
 │  │  ├─ app.ts        # fastify kurulumu, rotalar, rate limit
-│  │  ├─ db.ts         # better-sqlite3 + schema.sql uygulama
+│  │  ├─ db.ts        # node:sqlite (DatabaseSync) + schema.sql uygulama
 │  │  └─ routes/
 │  └─ web/
 │     ├─ src/screens/  # Generator, Result, Ledger, Settings
@@ -153,7 +153,7 @@ yalan-makinasi/
 ```
 
 ### 7.2 Ortam
-- Node 26, TypeScript 5.x, Vite 7, React 19, Tailwind 4, Fastify 5, better-sqlite3, zod.
+- Node 26, TypeScript 5.x, Vite 7, React 19, Tailwind 4, Fastify 5, **`node:sqlite` (Node 26'nın yerleşik `DatabaseSync`'i — native derleme yok)**, zod.
 - `npm run dev`: Vite (5173) + server (8787, `--watch`), Vite proxy `/api`.
 - `npm run build && npm start`: tek süreç, 8787.
 - Test: Vitest (`engine` birim, `server` `inject`).
