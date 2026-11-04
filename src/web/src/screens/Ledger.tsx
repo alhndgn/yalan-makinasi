@@ -10,16 +10,27 @@ type Props = { conflicts?: Conflict[] };
 
 const NEXT_STATUS: Record<Status, Status> = { beklemede: 'tuttu', tuttu: 'tutmadı', 'tutmadı': 'beklemede' };
 
-export function Ledger({ conflicts = [] }: Props) {
+export function Ledger({ conflicts: conflictsProp }: Props) {
   const [items, setItems] = useState<SavedLie[] | null>(null);
+  const [conflicts, setConflicts] = useState<Conflict[]>(conflictsProp ?? []);
   const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     api
       .listLies()
-      .then((r) => setItems(r.items))
+      .then((r) => {
+        setItems(r.items);
+        if (conflictsProp === undefined && r.items[0]) {
+          fetch(`/api/lies/conflicts?target=${encodeURIComponent(r.items[0].target)}`, {
+            headers: { 'x-device-id': localStorage.getItem('ym_device') ?? '' },
+          })
+            .then((res) => res.json())
+            .then((data: { conflicts?: Conflict[] }) => setConflicts(data.conflicts ?? []))
+            .catch(() => setConflicts([]));
+        }
+      })
       .catch(() => setItems([]));
-  }, []);
+  }, [conflictsProp]);
 
   async function cycleStatus(item: SavedLie) {
     const next = NEXT_STATUS[item.status];

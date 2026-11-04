@@ -1,0 +1,147 @@
+import { useState } from 'react';
+import { DEFAULT_FORM, INTENSITY_MAX, INTENSITY_MIN, STYLES } from '../../../shared/constants.ts';
+import type { AiMode } from '../../../shared/constants.ts';
+import { api } from '../lib/api.ts';
+
+type Props = { aiMode: AiMode; onBack: () => void };
+
+const AI_LABEL: Record<AiMode, string> = {
+  off: 'Şablon motoru · ağ kullanılmıyor',
+  ollama: 'Yerel model (Ollama · 3090)',
+  openrouter: 'Bulut (OpenRouter)',
+};
+
+const DEFAULTS_KEY = 'ym_defaults';
+
+type Defaults = { style: string; intensity: number };
+
+function readDefaults(): Defaults {
+  try {
+    const raw = localStorage.getItem(DEFAULTS_KEY);
+    if (raw) return JSON.parse(raw) as Defaults;
+  } catch {
+    /* yoksay */
+  }
+  return { style: DEFAULT_FORM.style, intensity: DEFAULT_FORM.intensity };
+}
+
+export function Settings({ aiMode, onBack }: Props) {
+  const [defaults, setDefaults] = useState<Defaults>(readDefaults);
+  const [note, setNote] = useState<string | null>(null);
+
+  function saveDefaults(next: Defaults) {
+    setDefaults(next);
+    try {
+      localStorage.setItem(DEFAULTS_KEY, JSON.stringify(next));
+    } catch {
+      /* yoksay */
+    }
+  }
+
+  async function exportLedger() {
+    try {
+      const data = await api.listLies();
+      const blob = new Blob([JSON.stringify(data.items, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'yalan-defteri.json';
+      link.click();
+      URL.revokeObjectURL(link.href);
+      setNote(`${data.items.length} kayıt dışa aktarıldı.`);
+    } catch {
+      setNote('Dışa aktarma başarısız.');
+    }
+  }
+
+  async function deleteAll() {
+    if (typeof confirm === 'function' && !confirm('Defterdeki tüm kayıtlar silinecek. Emin misin?')) return;
+    try {
+      const res = await api.deleteAll();
+      setNote(`${res.deleted} kayıt silindi.`);
+    } catch {
+      setNote('Silme başarısız.');
+    }
+  }
+
+  return (
+    <section className="stack">
+      <header className="hero">
+        <p className="eyebrow">ayarlar</p>
+        <h1 className="title">Ayarlar</h1>
+      </header>
+
+      <div className="card">
+        <p className="label">Yapay zekâ</p>
+        <p className="setting-value">{AI_LABEL[aiMode]}</p>
+        <p className="muted small">
+          Şablon motoru her zaman çalışır. Model seçiliyse metinler önce modelden istenir; model yanıt vermezse
+          sessizce şablona dönülür.
+        </p>
+      </div>
+
+      <div className="card">
+        <p className="label">Varsayılan ton</p>
+        <div className="seg">
+          {STYLES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={defaults.style === s.id ? 'is-active' : ''}
+              onClick={() => saveDefaults({ ...defaults, style: s.id })}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="label">Varsayılan yalan şiddeti</p>
+        <input
+          className="input"
+          type="number"
+          min={INTENSITY_MIN}
+          max={INTENSITY_MAX}
+          value={defaults.intensity}
+          onChange={(e) => saveDefaults({ ...defaults, intensity: Number(e.target.value) })}
+        />
+      </div>
+
+      <div className="card">
+        <p className="label">Verilerim</p>
+        <div className="settings-actions">
+          <button type="button" onClick={() => void exportLedger()}>
+            Defteri dışa aktar (JSON)
+          </button>
+          <button type="button" className="danger" onClick={() => void deleteAll()}>
+            Tüm kayıtları sil
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
+        <p className="label">KVKK ve kullanım</p>
+        <p className="muted small">
+          Bu uygulama eğlence amaçlıdır. Resmî belge, sağlık raporu veya imza içeren içerik üretmez. Hesap
+          açılmaz; cihazında üretilen rastgele bir kimlik dışında kimlik bilgisi toplanmaz, IP adresi
+          kaydedilmez. Kayıtlarını istediğin an silebilir veya dışa aktarabilirsin. Veriler yalnızca bu
+          uygulamanın sunucusunda saklanır; üçüncü taraflarla paylaşılmaz.
+        </p>
+        <p className="muted small">
+          Uygulama hukuki danışmanlık vermez. Başkalarına zarar vermek, iftira atmak veya dolandırıcılık
+          amacıyla kullanılamaz.
+        </p>
+      </div>
+
+      <button type="button" className="btn-ghost" onClick={onBack}>
+        ← Üreticiye dön
+      </button>
+
+      {note && (
+        <p className="toast" role="status">
+          {note}
+        </p>
+      )}
+
+      <p className="fineprint">Yalan Makinası · v0.1.0</p>
+    </section>
+  );
+}

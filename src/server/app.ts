@@ -1,4 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import fastifyStatic from '@fastify/static';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { AiMode } from '../shared/constants.ts';
 import { getProvider } from '../engine/providers/index.ts';
 import { openDb } from './db.ts';
@@ -43,6 +46,17 @@ export function buildApp(opts: BuildAppOptions = {}): FastifyInstance {
 
   registerGenerateRoutes(app, db, provider);
   registerLieRoutes(app, db);
+
+  const distDir = resolve(process.cwd(), 'src/web/dist');
+  if (existsSync(distDir)) {
+    app.register(fastifyStatic, { root: distDir });
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/')) {
+        return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Yol bulunamadı.' } });
+      }
+      return reply.sendFile('index.html');
+    });
+  }
 
   app.addHook('onClose', async () => {
     db.close();

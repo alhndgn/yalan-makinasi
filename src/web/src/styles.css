@@ -126,6 +126,26 @@
 .badge-tuttu { color: var(--color-risk-low); }
 .badge-tutmadı { color: var(--color-risk-high); }
 
+
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 4px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: #0b0b0de6; backdrop-filter: blur(12px); border-top: 1px solid var(--color-line);
+}
+.tabbar button {
+  flex: 1; background: transparent; border: 0; color: #7c776f; font-size: 12px; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 11px 4px; border-radius: 10px; cursor: pointer;
+}
+.tabbar button.is-active { color: var(--color-accent); background: #1a1a1e; }
+.setting-value { margin: 0; font-size: 15px; color: #ece7de; }
+.small { font-size: 12.5px; line-height: 1.6; }
+.settings-actions { display: flex; flex-direction: column; gap: 8px; }
+.settings-actions button {
+  background: #1c1c20; border: 1px solid var(--color-line); color: #ded9d0; border-radius: 10px;
+  padding: 12px; font-size: 14px; cursor: pointer; min-height: 44px;
+}
+.settings-actions .danger { color: #ff9d9d; border-color: #5a2a2d; }
+.btn-ghost { background: transparent; border: 1px solid var(--color-line); color: #a9a49b; border-radius: 10px; padding: 12px; cursor: pointer; }
+
 .toast {
   margin: 0; font-size: 12px; color: var(--color-accent); text-align: center;
   background: #241c0d; border: 1px solid #4a3616; border-radius: 8px; padding: 8px;

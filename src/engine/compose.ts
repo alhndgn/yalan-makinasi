@@ -20,6 +20,15 @@ export type VariantDraft = {
   hasLocation: boolean;
 };
 
+/** Noktalama ve büyük/küçük harf farkını yok sayarak karşılaştırma anahtarı üretir. */
+export function normalizeSentence(text: string): string {
+  return text
+    .toLocaleLowerCase('tr-TR')
+    .replace(/[.,!?;:…"'“”]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function detailCountFor(intensity: number): number {
   return Math.min(3, Math.floor(intensity / 3));
 }
@@ -58,7 +67,19 @@ function composeOne(bank: Bank, input: ComposeInput, strategy: Strategy): Varian
   const kind: CloserKind = strategy === 'sade' ? 'kisa' : strategy === 'duygusal' ? 'empati' : 'normal';
   const closer = pickCloser(bank, input.style, kind, rng);
 
-  const text = [opening, ...details.map((d) => d.text), closer].join(' ').replace(/\s+/g, ' ').trim();
+  const parts = [opening, ...details.map((d) => d.text), closer];
+  const kept: string[] = [];
+  for (const part of parts) {
+    const normalized = normalizeSentence(part);
+    if (normalized.length === 0) continue;
+    // Aynı cümleyi (ya da içindeki ifadeyi) iki kez yazma:
+    // "Kusura bakma, gelemedim." + "Kusura bakma." → ikincisi düşer.
+    if (kept.some((k) => normalizeSentence(k).includes(normalized) || normalized.includes(normalizeSentence(k)))) {
+      continue;
+    }
+    kept.push(part);
+  }
+  const text = kept.join(' ').replace(/\s+/g, ' ').trim();
   const tags = details.map((d) => d.tag);
 
   return {

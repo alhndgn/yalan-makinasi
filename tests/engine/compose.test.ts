@@ -20,6 +20,20 @@ describe('compose', () => {
     expect(a).not.toBe(b);
   });
 
+  it('tekrar eden cümleyi iki kez yazmaz', () => {
+    for (const intensity of [1, 5, 10]) {
+      for (const draft of compose({ ...base, intensity })) {
+        const sentences = draft.text
+          .split(/(?<=\.)\s+/)
+          .map((s) => s.trim().toLowerCase().replace(/[.,!?;:…"'“”]/g, ''));
+        for (const s of sentences) {
+          const others = sentences.filter((o) => o !== s);
+          expect(others.some((o) => o.includes(s) || s.includes(o))).toBe(false);
+        }
+      }
+    }
+  });
+
   it('detay sayısı şiddetle artar ve 3 ile sınırlıdır', () => {
     expect(compose({ ...base, intensity: 1 })[1]!.detailTags).toHaveLength(0);
     expect(compose({ ...base, intensity: 6 })[1]!.detailTags).toHaveLength(2);
