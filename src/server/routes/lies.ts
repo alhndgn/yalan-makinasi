@@ -27,6 +27,7 @@ export function registerLieRoutes(app: FastifyInstance, db: DatabaseSync) {
     if (!parsed.success) return fail(reply, 400, 'VALIDATION', 'Kayıt gövdesi geçersiz.');
 
     const { variant, form } = parsed.data;
+    const provider = parsed.data.provider ?? 'template';
     const id = randomUUID();
     insertLie(db, {
       id,
@@ -43,7 +44,7 @@ export function registerLieRoutes(app: FastifyInstance, db: DatabaseSync) {
       riskReasons: variant.riskReasons,
       queries: variant.queries,
       detailTags: extractDetailTags(form.situation, variant.text),
-      provider: 'template',
+      provider,
       status: 'beklemede',
     });
     return { id, createdAt: Date.now() };

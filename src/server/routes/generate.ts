@@ -24,6 +24,6 @@ export function registerGenerateRoutes(app: FastifyInstance, db: DatabaseSync, p
       : String(Date.now());
 
     const variants = await provider.generate(body, { deviceId, salt, conflictCount: conflicts.length });
-    return { variants };
+    return { variants, provider: provider.id };
   });
 }

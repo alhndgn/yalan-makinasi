@@ -29,14 +29,13 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
 export type RiskPreview = { score: number; level: 'dusuk' | 'orta' | 'yuksek'; reasons: string[] };
 
 export const api = {
-  async generate(body: GenerateRequest & { salt?: string }): Promise<Variant[]> {
+  async generate(body: GenerateRequest & { salt?: string }): Promise<{ variants: Variant[]; provider: string }> {
     const { salt, ...payload } = body;
     const query = salt ? `?salt=${encodeURIComponent(salt)}` : '';
-    const data = await call<{ variants: Variant[] }>(`/api/generate${query}`, {
+    return call<{ variants: Variant[]; provider: string }>(`/api/generate${query}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    return data.variants;
   },
 
   previewRisk(query: { target: TargetId; situation: string; channel: string; intensity: number }): Promise<RiskPreview> {
@@ -49,7 +48,7 @@ export const api = {
     return call<RiskPreview>(`/api/lies/conflicts/preview?${qs}`);
   },
 
-  saveLie(payload: { variant: Variant; form: GenerateRequest }): Promise<{ id: string }> {
+  saveLie(payload: { variant: Variant; form: GenerateRequest; provider?: string }): Promise<{ id: string }> {
     return call<{ id: string }>('/api/lies', { method: 'POST', body: JSON.stringify(payload) });
   },
 

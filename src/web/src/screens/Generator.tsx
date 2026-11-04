@@ -16,6 +16,7 @@ export function Generator({ onGenerated }: Props) {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<RiskPreview | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
+  const [provider, setProvider] = useState<string>('template');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -32,8 +33,9 @@ export function Generator({ onGenerated }: Props) {
     setError(null);
     try {
       const result = await api.generate({ ...form, salt: String(Date.now()) });
-      setVariants(result);
-      onGenerated(result);
+      setVariants(result.variants);
+      setProvider(result.provider ?? 'template');
+      onGenerated(result.variants);
     } catch (err) {
       const code = err instanceof ApiError ? err.code : 'UNKNOWN';
       setError(
@@ -51,7 +53,7 @@ export function Generator({ onGenerated }: Props) {
 
   async function saveVariant(variant: Variant) {
     try {
-      await api.saveLie({ variant, form });
+      await api.saveLie({ variant, form, provider });
       setSavedNote("Defter'e kaydedildi.");
       setTimeout(() => setSavedNote(null), 2200);
     } catch {

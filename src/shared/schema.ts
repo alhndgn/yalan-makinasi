@@ -73,6 +73,7 @@ export type SavedLie = z.infer<typeof savedLieSchema>;
 export const saveLieRequestSchema = z.object({
   variant: variantSchema,
   form: generateRequestSchema,
+  provider: z.enum(['template', 'ollama', 'openrouter']).optional(),
 });
 
 export const updateStatusSchema = z.object({
