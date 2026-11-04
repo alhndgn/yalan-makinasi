@@ -158,6 +158,20 @@ export function deleteAllLies(db: DatabaseSync, deviceId: string): number {
   return Number(res.changes);
 }
 
+export function listRecentByTarget(
+  db: DatabaseSync,
+  deviceId: string,
+  target: TargetId,
+): { lieId: string; createdAt: number; text: string }[] {
+  const rows = db
+    .prepare(
+      `SELECT id, text, created_at FROM lies
+       WHERE device_id = ? AND target = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 20`,
+    )
+    .all(deviceId, target, Date.now() - THIRTY_DAYS) as unknown as { id: string; text: string; created_at: number }[];
+  return rows.map((row) => ({ lieId: row.id, createdAt: row.created_at, text: row.text }));
+}
+
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
 export function findConflicts(

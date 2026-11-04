@@ -1,6 +1,13 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import type { AiMode } from '../shared/constants.ts';
+import { getProvider } from '../engine/providers/index.ts';
+import { openDb } from './db.ts';
+import { createRateLimiter } from './rateLimit.ts';
+import { fail } from './routes/helpers.ts';
+import { registerGenerateRoutes } from './routes/generate.ts';
+import { registerLieRoutes } from './routes/lies.ts';
 
-export type AiMode = 'off' | 'ollama' | 'openrouter';
+export type { AiMode };
 
 export type BuildAppOptions = {
   dbPath?: string;
@@ -10,12 +17,36 @@ export type BuildAppOptions = {
 
 export function buildApp(opts: BuildAppOptions = {}): FastifyInstance {
   const app = Fastify({ logger: false });
+  const db = openDb(opts.dbPath ?? ':memory:');
+  const aiMode = opts.aiMode ?? 'off';
+  const provider = getProvider(aiMode);
+  const limit = createRateLimiter(opts.rateLimitPerMin ?? 20);
 
-  app.get('/api/health', async () => ({
-    ok: true,
-    aiMode: opts.aiMode ?? 'off',
-    version: '0.1.0',
-  }));
+  app.addHook('onRequest', async (req, reply) => {
+    if (!req.url.startsWith('/api/') || req.url.startsWith('/api/health')) return;
+
+    if (!req.headers['x-device-id']) {
+      return fail(reply, 400, 'DEVICE_REQUIRED', 'X-Device-Id başlığı gerekli.');
+    }
+
+    if (req.method === 'POST' && req.url.startsWith('/api/generate')) {
+      const key = `${String(req.headers['x-device-id'])}|${req.ip}`;
+      const result = limit(key);
+      if (!result.allowed) {
+        reply.header('retry-after', String(result.retryAfter));
+        return fail(reply, 429, 'RATE_LIMITED', 'Biraz bekle, çok hızlı üretiyorsun.');
+      }
+    }
+  });
+
+  app.get('/api/health', async () => ({ ok: true, aiMode, version: '0.1.0' }));
+
+  registerGenerateRoutes(app, db, provider);
+  registerLieRoutes(app, db);
+
+  app.addHook('onClose', async () => {
+    db.close();
+  });
 
   return app;
 }
