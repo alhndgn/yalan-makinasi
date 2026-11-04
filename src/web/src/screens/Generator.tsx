@@ -169,6 +169,7 @@ export function Generator({ onGenerated }: Props) {
             <VariantCard
               key={i}
               variant={v}
+              targetLabel={TARGETS.find((t) => t.id === form.target)?.label}
               onSave={() => saveVariant(v)}
               onRegenerate={generate}
             />

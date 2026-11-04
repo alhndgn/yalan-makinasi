@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import type { Variant } from '../../../shared/schema.ts';
+import { downloadShareCard } from '../lib/shareCard.ts';
 import { Typewriter } from './Typewriter.tsx';
 
 type Props = {
   variant: Variant;
+  targetLabel?: string;
   onSave: () => void;
   onRegenerate: () => void;
 };
@@ -11,7 +13,7 @@ type Props = {
 const RISK_LABEL: Record<Variant['riskLevel'], string> = { dusuk: 'DÜŞÜK', orta: 'ORTA', yuksek: 'YÜKSEK' };
 const STRATEGY_LABEL: Record<Variant['strategy'], string> = { sade: 'sade', detayli: 'detaylı', duygusal: 'duygusal' };
 
-export function VariantCard({ variant, onSave, onRegenerate }: Props) {
+export function VariantCard({ variant, targetLabel = 'Özel', onSave, onRegenerate }: Props) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -70,6 +72,12 @@ export function VariantCard({ variant, onSave, onRegenerate }: Props) {
         </a>
         <button type="button" onClick={onSave}>
           Defter&apos;e kaydet
+        </button>
+        <button
+          type="button"
+          onClick={() => void downloadShareCard({ text: variant.text, riskLevel: variant.riskLevel }, targetLabel)}
+        >
+          Kart indir
         </button>
         <button type="button" onClick={onRegenerate} className="ghost">
           ↻ Yeniden
