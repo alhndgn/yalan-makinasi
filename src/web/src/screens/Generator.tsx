@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CHANNELS, DEFAULT_FORM, SITUATIONS, STYLES, TARGETS } from '../../../shared/constants.ts';
 import type { GenerateRequest, Variant } from '../../../shared/schema.ts';
 import { IntensitySlider } from '../components/IntensitySlider.tsx';
+import { VariantCard } from '../components/VariantCard.tsx';
 import { ApiError, api, type RiskPreview } from '../lib/api.ts';
 
 type Props = { onGenerated: (variants: Variant[]) => void };
@@ -14,6 +15,7 @@ export function Generator({ onGenerated }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<RiskPreview | null>(null);
+  const [savedNote, setSavedNote] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -44,6 +46,16 @@ export function Generator({ onGenerated }: Props) {
       setVariants([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveVariant(variant: Variant) {
+    try {
+      await api.saveLie({ variant, form });
+      setSavedNote("Defter'e kaydedildi.");
+      setTimeout(() => setSavedNote(null), 2200);
+    } catch {
+      setSavedNote('Kaydedilemedi, tekrar dene.');
     }
   }
 
@@ -154,26 +166,18 @@ export function Generator({ onGenerated }: Props) {
         <div className="stack">
           <p className="label">3 alternatif · {situationLabel}</p>
           {variants.map((v, i) => (
-            <article className="card variant" data-testid="variant-card" key={i}>
-              <div className="variant-head">
-                <span className="tag">{v.strategy}</span>
-                <span className={`risk risk-${v.riskLevel}`}>
-                  {RISK_LABEL[v.riskLevel]} {v.riskScore}/100
-                </span>
-              </div>
-              <p className="variant-text">{v.text}</p>
-              {v.queries.length > 0 && (
-                <ul className="queries">
-                  {v.queries.map((q) => (
-                    <li key={q.q}>
-                      <span className="q">{q.q}</span>
-                      <span className="a">{q.a}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </article>
+            <VariantCard
+              key={i}
+              variant={v}
+              onSave={() => saveVariant(v)}
+              onRegenerate={generate}
+            />
           ))}
+          {savedNote && (
+            <p className="toast" role="status">
+              {savedNote}
+            </p>
+          )}
         </div>
       )}
 
