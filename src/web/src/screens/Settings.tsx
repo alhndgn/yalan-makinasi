@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { DEFAULT_FORM, INTENSITY_MAX, INTENSITY_MIN, STYLES } from '../../../shared/constants.ts';
+import { INTENSITY_MAX, INTENSITY_MIN, STYLES } from '../../../shared/constants.ts';
 import type { AiMode } from '../../../shared/constants.ts';
 import { api } from '../lib/api.ts';
+import { readDefaults, writeDefaults, type Defaults } from '../lib/defaults.ts';
 
 type Props = { aiMode: AiMode; onBack: () => void };
 
@@ -11,31 +12,13 @@ const AI_LABEL: Record<AiMode, string> = {
   openrouter: 'Bulut (OpenRouter)',
 };
 
-const DEFAULTS_KEY = 'ym_defaults';
-
-type Defaults = { style: string; intensity: number };
-
-function readDefaults(): Defaults {
-  try {
-    const raw = localStorage.getItem(DEFAULTS_KEY);
-    if (raw) return JSON.parse(raw) as Defaults;
-  } catch {
-    /* yoksay */
-  }
-  return { style: DEFAULT_FORM.style, intensity: DEFAULT_FORM.intensity };
-}
-
 export function Settings({ aiMode, onBack }: Props) {
   const [defaults, setDefaults] = useState<Defaults>(readDefaults);
   const [note, setNote] = useState<string | null>(null);
 
   function saveDefaults(next: Defaults) {
     setDefaults(next);
-    try {
-      localStorage.setItem(DEFAULTS_KEY, JSON.stringify(next));
-    } catch {
-      /* yoksay */
-    }
+    writeDefaults(next);
   }
 
   async function exportLedger() {
@@ -46,7 +29,8 @@ export function Settings({ aiMode, onBack }: Props) {
       link.href = URL.createObjectURL(blob);
       link.download = 'yalan-defteri.json';
       link.click();
-      URL.revokeObjectURL(link.href);
+      const href = link.href;
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
       setNote(`${data.items.length} kayıt dışa aktarıldı.`);
     } catch {
       setNote('Dışa aktarma başarısız.');

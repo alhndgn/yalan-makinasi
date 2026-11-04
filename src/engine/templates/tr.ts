@@ -8,7 +8,7 @@ import { ozel } from './tr/ozel.ts';
 import { parayiHarcadim } from './tr/parayi_harcadim.ts';
 import { planiBozdum } from './tr/plani_bozdum.ts';
 
-export type { Bank, CloserKind, DetailTag } from './types.ts';
+export type { Bank, CloserKind, Detail, DetailTag } from './types.ts';
 
 export const banks: Record<SituationId, Bank> = {
   gec_kaldim: gecKaldim,

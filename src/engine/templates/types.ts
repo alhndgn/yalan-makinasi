@@ -3,12 +3,19 @@ import type { SituationId, StyleId } from '../../shared/constants.ts';
 export type DetailTag = 'ulasim' | 'saglik' | 'aile' | 'is' | 'konum' | 'ikinci_kisi';
 export type CloserKind = 'kisa' | 'normal' | 'empati';
 
+/** Detay cümlesi, davet ettiği soru ve o detaya ait cevap birlikte durur. */
+export type Detail = {
+  tag: DetailTag;
+  text: string;
+  q: string;
+  a: string;
+};
+
 export type Bank = {
   id: SituationId;
   openings: { style: StyleId; text: string }[];
-  details: { tag: DetailTag; text: string }[];
+  details: Detail[];
   closers: { kind: CloserKind; style: StyleId; text: string }[];
-  queries: { q: string; tag: DetailTag; a: string }[];
 };
 
 export const baseClosers = (short: string, normal: string, empathy: string): Bank['closers'] => [

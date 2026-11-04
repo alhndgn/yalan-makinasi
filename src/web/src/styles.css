@@ -55,8 +55,8 @@
 .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #8b867e; margin: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
-  border: 1px solid var(--color-line); background: #0f0f11; color: #d8d3ca; padding: 9px 13px;
-  border-radius: 999px; font-size: 14px; min-height: 40px; cursor: pointer; transition: background 120ms;
+  border: 1px solid var(--color-line); background: #0f0f11; color: #d8d3ca; padding: 11px 14px;
+  border-radius: 999px; font-size: 14px; min-height: 44px; cursor: pointer; transition: background 120ms;
 }
 .chip:hover { background: #191a1d; }
 .chip.is-active { background: var(--color-accent); color: #1a1206; border-color: transparent; font-weight: 600; }
@@ -66,8 +66,8 @@
 }
 .seg { display: flex; gap: 4px; background: #0f0f11; border: 1px solid var(--color-line); border-radius: 10px; padding: 4px; }
 .seg button {
-  flex: 1; background: transparent; border: 0; color: #a9a49b; padding: 8px 4px; border-radius: 7px;
-  font-size: 13px; cursor: pointer;
+  flex: 1; background: transparent; border: 0; color: #a9a49b; padding: 11px 4px; border-radius: 7px;
+  font-size: 13px; cursor: pointer; min-height: 44px;
 }
 .seg button.is-active { background: #26262b; color: #fff; }
 .grid2 { display: grid; gap: 12px; }
@@ -120,7 +120,8 @@
 }
 .badge {
   font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-  border-radius: 999px; padding: 5px 10px; border: 1px solid currentColor; background: transparent; cursor: pointer;
+  border-radius: 999px; padding: 5px 10px; border: 1px solid currentColor; background: transparent;
+  cursor: pointer; min-height: 44px; min-width: 44px;
 }
 .badge-beklemede { color: #c9a227; }
 .badge-tuttu { color: var(--color-risk-low); }
@@ -133,7 +134,7 @@
 }
 .tabbar button {
   flex: 1; background: transparent; border: 0; color: #7c776f; font-size: 12px; letter-spacing: 0.06em;
-  text-transform: uppercase; padding: 11px 4px; border-radius: 10px; cursor: pointer;
+  text-transform: uppercase; padding: 13px 4px; border-radius: 10px; cursor: pointer; min-height: 44px;
 }
 .tabbar button.is-active { color: var(--color-accent); background: #1a1a1e; }
 .setting-value { margin: 0; font-size: 15px; color: #ece7de; }

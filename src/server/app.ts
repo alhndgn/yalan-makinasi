@@ -42,6 +42,20 @@ export function buildApp(opts: BuildAppOptions = {}): FastifyInstance {
     }
   });
 
+  app.setErrorHandler((error, req, reply) => {
+    const status = error.statusCode && error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500;
+    if (!req.url.startsWith('/api/')) {
+      return reply.code(status).send(status === 500 ? 'Beklenmeyen bir hata oluştu.' : error.message);
+    }
+    if (status === 500) {
+      return reply.code(500).send({ error: { code: 'INTERNAL', message: 'Beklenmeyen bir hata oluştu.' } });
+    }
+    if (error.code?.includes('INVALID_JSON')) {
+      return reply.code(400).send({ error: { code: 'INVALID_JSON', message: 'Gövde geçerli JSON değil.' } });
+    }
+    return reply.code(status).send({ error: { code: error.code ?? 'BAD_REQUEST', message: error.message } });
+  });
+
   app.get('/api/health', async () => ({ ok: true, aiMode, version: '0.1.0' }));
 
   registerGenerateRoutes(app, db, provider);

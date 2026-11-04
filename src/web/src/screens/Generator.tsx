@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CHANNELS, DEFAULT_FORM, SITUATIONS, STYLES, TARGETS } from '../../../shared/constants.ts';
+import { readDefaults } from '../lib/defaults.ts';
 import type { GenerateRequest, Variant } from '../../../shared/schema.ts';
 import { IntensitySlider } from '../components/IntensitySlider.tsx';
 import { VariantCard } from '../components/VariantCard.tsx';
@@ -10,7 +11,12 @@ type Props = { onGenerated: (variants: Variant[]) => void };
 const RISK_LABEL: Record<RiskPreview['level'], string> = { dusuk: 'DÜŞÜK', orta: 'ORTA', yuksek: 'YÜKSEK' };
 
 export function Generator({ onGenerated }: Props) {
-  const [form, setForm] = useState<GenerateRequest>({ ...DEFAULT_FORM });
+  const [form, setForm] = useState<GenerateRequest>(() => {
+    const defaults = readDefaults();
+    return { ...DEFAULT_FORM, style: defaults.style, intensity: defaults.intensity };
+  });
+  // Sonuçlar hangi formla üretildiyse onunla kaydedilir.
+  const [usedForm, setUsedForm] = useState<GenerateRequest | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,8 +38,10 @@ export function Generator({ onGenerated }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const result = await api.generate({ ...form, salt: String(Date.now()) });
+      const request = { ...form };
+      const result = await api.generate({ ...request, salt: String(Date.now()) });
       setVariants(result.variants);
+      setUsedForm(request);
       setProvider(result.provider ?? 'template');
       onGenerated(result.variants);
     } catch (err) {
@@ -53,7 +61,7 @@ export function Generator({ onGenerated }: Props) {
 
   async function saveVariant(variant: Variant) {
     try {
-      await api.saveLie({ variant, form, provider });
+      await api.saveLie({ variant, form: usedForm ?? form, provider });
       setSavedNote("Defter'e kaydedildi.");
       setTimeout(() => setSavedNote(null), 2200);
     } catch {
@@ -166,12 +174,14 @@ export function Generator({ onGenerated }: Props) {
 
       {variants.length > 0 && (
         <div className="stack">
-          <p className="label">3 alternatif · {situationLabel}</p>
+          <p className="label">
+            3 alternatif · {SITUATIONS.find((s) => s.id === (usedForm ?? form).situation)?.label ?? situationLabel}
+          </p>
           {variants.map((v, i) => (
             <VariantCard
               key={i}
               variant={v}
-              targetLabel={TARGETS.find((t) => t.id === form.target)?.label}
+              targetLabel={TARGETS.find((t) => t.id === (usedForm ?? form).target)?.label}
               onSave={() => saveVariant(v)}
               onRegenerate={generate}
             />

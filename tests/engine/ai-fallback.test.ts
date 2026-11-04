@@ -3,7 +3,7 @@ import { createOpenAiCompatProvider } from '../../src/engine/providers/openaiCom
 import { getProvider } from '../../src/engine/providers/index.ts';
 
 const req = { target: 'patron', situation: 'gec_kaldim', channel: 'whatsapp', style: 'ciddi', intensity: 5 } as never;
-const ctx = { deviceId: 'd', salt: '0', conflictCount: 0 };
+const ctx = { deviceId: 'd', salt: '0', recent: [] };
 
 const validPayload = {
   choices: [
@@ -24,31 +24,33 @@ const validPayload = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('openaiCompat', () => {
-  it('geçerli JSON dönerse LLM varyantlarını kullanır', async () => {
+  it('geçerli JSON dönerse LLM varyantlarını ve kimliğini döner', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(validPayload), { status: 200 })));
     const p = createOpenAiCompatProvider({ id: 'ollama', baseUrl: 'http://x', model: 'm' });
-    const vs = await p.generate(req, ctx);
-    expect(vs.map((v) => v.text)).toEqual(['A', 'B', 'C']);
+    const result = await p.generate(req, ctx);
+    expect(result.variants.map((v) => v.text)).toEqual(['A', 'B', 'C']);
+    expect(result.provider).toBe('ollama');
   });
 
-  it('bozuk JSON → şablona düşer, hata fırlatmaz', async () => {
+  it('bozuk JSON → şablona düşer ve provider "template" olur', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('bozuk', { status: 200 })));
     const p = createOpenAiCompatProvider({ id: 'ollama', baseUrl: 'http://x', model: 'm' });
-    const vs = await p.generate(req, ctx);
-    expect(vs).toHaveLength(3);
-    expect(vs[0]!.text.length).toBeGreaterThan(0);
+    const result = await p.generate(req, ctx);
+    expect(result.variants).toHaveLength(3);
+    expect(result.provider).toBe('template');
   });
 
   it('500 → şablona düşer', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('err', { status: 500 })));
     const p = createOpenAiCompatProvider({ id: 'openrouter', baseUrl: 'http://x', model: 'm', apiKey: 'k' });
-    expect(await p.generate(req, ctx)).toHaveLength(3);
+    const result = await p.generate(req, ctx);
+    expect(result.provider).toBe('template');
   });
 
   it('ağ hatası → şablona düşer', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new Error('offline'))));
     const p = createOpenAiCompatProvider({ id: 'ollama', baseUrl: 'http://x', model: 'm' });
-    expect(await p.generate(req, ctx)).toHaveLength(3);
+    expect((await p.generate(req, ctx)).variants).toHaveLength(3);
   });
 
   it('getProvider off modunda şablon döner', () => {

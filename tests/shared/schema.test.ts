@@ -11,6 +11,10 @@ describe('generateRequestSchema', () => {
     expect(generateRequestSchema.safeParse({ ...base, intensity: 0 }).success).toBe(false);
     expect(generateRequestSchema.safeParse({ ...base, intensity: 11 }).success).toBe(false);
   });
+  it('boolean şiddet kabul edilmez', () => {
+    expect(generateRequestSchema.safeParse({ ...base, intensity: true }).success).toBe(false);
+  });
+
   it('NaN reddedilir', () => {
     expect(generateRequestSchema.safeParse({ ...base, intensity: NaN }).success).toBe(false);
   });

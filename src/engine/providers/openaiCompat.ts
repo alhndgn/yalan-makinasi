@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { variantSchema } from '../../shared/schema.ts';
-import type { GenerateContext, LlmProvider, ProviderId } from '../types.ts';
+import type { GenerateContext, GenerateResult, LlmProvider, ProviderId } from '../types.ts';
 import { templateProvider } from './template.ts';
 
 export type OpenAiCompatConfig = {
@@ -20,14 +20,14 @@ Kurallar:
 - Şiddet arttıkça cümle ve detay sayısı artar; 1-2 tek cümle, 9-10 tam hikâye.
 - Resmî belge, sağlık raporu, imza, fatura, mahkeme/savcılık ile ilgili içerik ÜRETME.
 - Üç strateji üret: "sade", "detayli", "duygusal".
-- Her metin için "queries" alanında karşı tarafın sorabileceği en fazla 3 soru ve metinle ÇELİŞMEYEN cevaplar yaz.
+- Her metin için "queries" alanında karşı tarafın sorabileceği en fazla 3 soru ve o metinle ÇELİŞMEYEN cevaplar yaz.
 - "riskScore" 0-100, "riskLevel" "dusuk" | "orta" | "yuksek".
 - Sadece şu JSON ile yanıt ver: {"variants":[{"text":"","strategy":"sade","riskScore":0,"riskLevel":"dusuk","riskReasons":[],"queries":[{"q":"","a":""}]}]}`;
 
 export function createOpenAiCompatProvider(cfg: OpenAiCompatConfig): LlmProvider {
   return {
     id: cfg.id,
-    async generate(req, ctx: GenerateContext) {
+    async generate(req, ctx: GenerateContext): Promise<GenerateResult> {
       try {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), cfg.timeoutMs ?? 6000);
@@ -65,7 +65,7 @@ export function createOpenAiCompatProvider(cfg: OpenAiCompatConfig): LlmProvider
         const raw = data.choices?.[0]?.message?.content;
         if (!raw) throw new Error('bos cevap');
         const parsed = responseSchema.parse(JSON.parse(raw));
-        return parsed.variants;
+        return { variants: parsed.variants, provider: cfg.id };
       } catch {
         // Sessiz düşüş: kullanıcı hata görmez, şablon motoru devralır.
         return templateProvider.generate(req, ctx);

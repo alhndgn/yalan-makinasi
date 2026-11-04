@@ -9,6 +9,7 @@ type Conflict = { lieId: string; createdAt: number; text: string };
 type Props = { conflicts?: Conflict[] };
 
 const NEXT_STATUS: Record<Status, Status> = { beklemede: 'tuttu', tuttu: 'tutmadı', 'tutmadı': 'beklemede' };
+const NEXT_LABEL: Record<Status, string> = { beklemede: 'beklemede', tuttu: 'tuttu', 'tutmadı': 'tutmadı' };
 
 export function Ledger({ conflicts: conflictsProp }: Props) {
   const [items, setItems] = useState<SavedLie[] | null>(null);
@@ -20,8 +21,8 @@ export function Ledger({ conflicts: conflictsProp }: Props) {
       .listLies()
       .then((r) => {
         setItems(r.items);
-        if (conflictsProp === undefined && r.items[0]) {
-          fetch(`/api/lies/conflicts?target=${encodeURIComponent(r.items[0].target)}`, {
+        if (conflictsProp === undefined) {
+          fetch('/api/lies/conflicts', {
             headers: { 'x-device-id': localStorage.getItem('ym_device') ?? '' },
           })
             .then((res) => res.json())
@@ -34,10 +35,12 @@ export function Ledger({ conflicts: conflictsProp }: Props) {
 
   async function cycleStatus(item: SavedLie) {
     const next = NEXT_STATUS[item.status];
+    const previous = item.status;
     setItems((prev) => prev?.map((p) => (p.id === item.id ? { ...p, status: next } : p)) ?? null);
     try {
-      await api.updateStatus(item.id, next === 'beklemede' ? 'tuttu' : next);
+      await api.updateStatus(item.id, next);
     } catch {
+      setItems((prev) => prev?.map((p) => (p.id === item.id ? { ...p, status: previous } : p)) ?? null);
       setNote('Durum güncellenemedi.');
     }
   }
@@ -96,7 +99,12 @@ export function Ledger({ conflicts: conflictsProp }: Props) {
                 <span className="tag">
                   {TARGET_LABEL[item.target] ?? item.target} · {formatWhen(item.createdAt)}
                 </span>
-                <button type="button" className={`badge badge-${item.status}`} onClick={() => cycleStatus(item)}>
+                <button
+                  type="button"
+                  className={`badge badge-${item.status}`}
+                  aria-label={`Durum: ${item.status}. Tıkla ve ${NEXT_LABEL[NEXT_STATUS[item.status]]} yap.`}
+                  onClick={() => cycleStatus(item)}
+                >
                   {item.status}
                 </button>
               </div>

@@ -30,7 +30,10 @@ export const generateRequestSchema = z.object({
     .optional(),
   channel: channelSchema,
   style: styleSchema,
-  intensity: z.coerce.number().int().min(INTENSITY_MIN).max(INTENSITY_MAX),
+  intensity: z.preprocess(
+    (value) => (typeof value === 'boolean' ? Number.NaN : value),
+    z.coerce.number().int().min(INTENSITY_MIN).max(INTENSITY_MAX),
+  ),
 });
 
 export type GenerateRequest = z.infer<typeof generateRequestSchema>;
@@ -38,7 +41,7 @@ export type GenerateRequest = z.infer<typeof generateRequestSchema>;
 export const querySchema = z.object({ q: z.string().min(1), a: z.string().min(1) });
 
 export const variantSchema = z.object({
-  text: z.string().min(1),
+  text: z.string().min(1).max(1000),
   strategy: strategySchema,
   riskScore: z.number().int().min(0).max(100),
   riskLevel: z.enum(['dusuk', 'orta', 'yuksek']),
@@ -53,7 +56,10 @@ export const previewQuerySchema = z.object({
   target: targetSchema,
   situation: situationSchema,
   channel: channelSchema,
-  intensity: z.coerce.number().int().min(INTENSITY_MIN).max(INTENSITY_MAX),
+  intensity: z.preprocess(
+    (value) => (typeof value === 'boolean' ? Number.NaN : value),
+    z.coerce.number().int().min(INTENSITY_MIN).max(INTENSITY_MAX),
+  ),
 });
 
 export type PreviewQuery = z.infer<typeof previewQuerySchema>;
@@ -77,5 +83,5 @@ export const saveLieRequestSchema = z.object({
 });
 
 export const updateStatusSchema = z.object({
-  status: z.enum(['tuttu', 'tutmadı']),
+  status: z.enum(['beklemede', 'tuttu', 'tutmadı']),
 });

@@ -53,8 +53,8 @@ export function VariantCard({ variant, targetLabel = 'Özel', onSave, onRegenera
         <details className="queries-box" open>
           <summary>Karşı taraf ne sorar ({variant.queries.length})</summary>
           <ul className="queries">
-            {variant.queries.map((q) => (
-              <li key={q.q}>
+            {variant.queries.map((q, i) => (
+              <li key={`${q.q}-${i}`}>
                 <span className="q">{q.q}</span>
                 <span className="a">{q.a}</span>
               </li>

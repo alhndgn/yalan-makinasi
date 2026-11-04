@@ -158,6 +158,72 @@ export function deleteAllLies(db: DatabaseSync, deviceId: string): number {
   return Number(res.changes);
 }
 
+export type ConflictPair = { lieId: string; target: TargetId; text: string; createdAt: number; overlap: string };
+
+/** Son 30 günde aynı kişiye söylenen ve birbiriyle çakışan kayıtlar. */
+export function findConflictPairs(db: DatabaseSync, deviceId: string): ConflictPair[] {
+  const rows = db
+    .prepare(
+      `SELECT id, target, text, created_at, situation, detail_tags FROM lies
+       WHERE device_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 200`,
+    )
+    .all(deviceId, Date.now() - THIRTY_DAYS) as unknown as {
+    id: string;
+    target: string;
+    text: string;
+    created_at: number;
+    situation: string;
+    detail_tags: string;
+  }[];
+
+  const pairs: ConflictPair[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = i + 1; j < rows.length; j++) {
+      const a = rows[i]!;
+      const b = rows[j]!;
+      if (a.target !== b.target) continue;
+
+      const tagsA = JSON.parse(a.detail_tags) as string[];
+      const shared = tagsA.filter((tag) => (JSON.parse(b.detail_tags) as string[]).includes(tag));
+      const sameSituation = a.situation === b.situation;
+      if (!sameSituation && shared.length === 0) continue;
+
+      const key = [a.id, b.id].sort().join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      pairs.push({
+        lieId: a.id,
+        target: a.target as TargetId,
+        text: a.text,
+        createdAt: a.created_at,
+        overlap: sameSituation ? 'aynı durum' : `ortak detay: ${shared.join(', ')}`,
+      });
+    }
+  }
+
+  return pairs.slice(0, 20);
+}
+
+export function listRecentForTarget(
+  db: DatabaseSync,
+  deviceId: string,
+  target: TargetId,
+): { situation: SituationId; detailTags: string[] }[] {
+  const rows = db
+    .prepare(
+      `SELECT situation, detail_tags FROM lies
+       WHERE device_id = ? AND target = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 50`,
+    )
+    .all(deviceId, target, Date.now() - THIRTY_DAYS) as unknown as { situation: string; detail_tags: string }[];
+  return rows.map((row) => ({
+    situation: row.situation as SituationId,
+    detailTags: JSON.parse(row.detail_tags) as string[],
+  }));
+}
+
 export function listRecentByTarget(
   db: DatabaseSync,
   deviceId: string,

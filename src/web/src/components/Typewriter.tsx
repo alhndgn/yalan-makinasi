@@ -18,7 +18,7 @@ export function Typewriter({ text, speedMs = 18 }: Props) {
     setShown('');
     let i = 0;
     const timer = setInterval(() => {
-      i += 2;
+      i += 1;
       setShown(text.slice(0, i));
       if (i >= text.length) clearInterval(timer);
     }, speedMs);

@@ -109,5 +109,5 @@ export async function downloadShareCard(input: ShareCardInput, targetLabel: stri
   link.href = url;
   link.download = 'yalan-makinasi.png';
   link.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -1,6 +1,8 @@
-node_modules/
-dist/
-data/*.db
-.env
 .DS_Store
+.env
 .superpowers/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+dist/
+node_modules/

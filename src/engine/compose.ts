@@ -1,11 +1,12 @@
 import { STRATEGIES, type ChannelId, type SituationId, type Strategy, type StyleId, type TargetId } from '../shared/constants.ts';
 import { hashSeed, mulberry32 } from './random.ts';
-import { banks, type Bank, type CloserKind, type DetailTag } from './templates/tr.ts';
+import { banks, type Bank, type CloserKind, type Detail, type DetailTag } from './templates/tr.ts';
 
 export type ComposeInput = {
   deviceId: string;
   target: TargetId;
   situation: SituationId;
+  situationCustom?: string;
   channel: ChannelId;
   style: StyleId;
   intensity: number;
@@ -16,11 +17,12 @@ export type VariantDraft = {
   strategy: Strategy;
   text: string;
   detailTags: DetailTag[];
+  selectedDetails: Detail[];
   hasSecondPerson: boolean;
   hasLocation: boolean;
 };
 
-/** Noktalama ve büyük/küçük harf farkını yok sayarak karşılaştırma anahtarı üretir. */
+/** Noktalama ve büyük/küçük harf farkını yok sayan karşılaştırma anahtarı. */
 export function normalizeSentence(text: string): string {
   return text
     .toLocaleLowerCase('tr-TR')
@@ -36,32 +38,38 @@ export function detailCountFor(intensity: number): number {
 function pickOpening(bank: Bank, style: StyleId, rng: () => number): string {
   const pool = bank.openings.filter((o) => o.style === style);
   const usable = pool.length > 0 ? pool : bank.openings.filter((o) => o.style === 'ciddi');
-  const idx = Math.floor(rng() * usable.length);
-  return usable[idx]!.text;
+  return usable[Math.floor(rng() * usable.length)]!.text;
 }
 
 function pickCloser(bank: Bank, style: StyleId, kind: CloserKind, rng: () => number): string {
   const match = bank.closers.filter((c) => c.kind === kind && c.style === style);
   const pool = match.length > 0 ? match : bank.closers.filter((c) => c.kind === kind);
-  const idx = Math.floor(rng() * pool.length);
-  return pool[idx]!.text;
+  return pool[Math.floor(rng() * pool.length)]!.text;
 }
 
-function pickDetails(bank: Bank, count: number, rng: () => number) {
-  if (count === 0) return [] as { tag: DetailTag; text: string }[];
+function pickDetails(bank: Bank, count: number, rng: () => number): Detail[] {
+  if (count === 0) return [];
   const start = Math.floor(rng() * bank.details.length);
-  const picked: { tag: DetailTag; text: string }[] = [];
-  for (let i = 0; i < count; i++) {
-    picked.push(bank.details[(start + i) % bank.details.length]!);
-  }
+  const picked: Detail[] = [];
+  for (let i = 0; i < count; i++) picked.push(bank.details[(start + i) % bank.details.length]!);
   return picked;
+}
+
+/** Kullanıcının yazdığı durum metnini cümle olarak kullanılabilir hale getirir. */
+function customSentence(custom: string | undefined): string | null {
+  const trimmed = (custom ?? '').trim().replace(/\s+/g, ' ');
+  if (!trimmed) return null;
+  const withDot = /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+  return `Durum şöyle: ${withDot}`;
 }
 
 function composeOne(bank: Bank, input: ComposeInput, strategy: Strategy): VariantDraft {
   const rng = mulberry32(
     hashSeed(input.deviceId, input.target, input.situation, input.channel, input.style, input.intensity, strategy, input.salt),
   );
-  const opening = pickOpening(bank, input.style, rng);
+
+  const custom = input.situation === 'ozel' ? customSentence(input.situationCustom) : null;
+  const opening = custom ?? pickOpening(bank, input.style, rng);
   const count = strategy === 'sade' ? 0 : detailCountFor(input.intensity);
   const details = pickDetails(bank, count, rng);
   const kind: CloserKind = strategy === 'sade' ? 'kisa' : strategy === 'duygusal' ? 'empati' : 'normal';
@@ -72,13 +80,12 @@ function composeOne(bank: Bank, input: ComposeInput, strategy: Strategy): Varian
   for (const part of parts) {
     const normalized = normalizeSentence(part);
     if (normalized.length === 0) continue;
-    // Aynı cümleyi (ya da içindeki ifadeyi) iki kez yazma:
-    // "Kusura bakma, gelemedim." + "Kusura bakma." → ikincisi düşer.
     if (kept.some((k) => normalizeSentence(k).includes(normalized) || normalized.includes(normalizeSentence(k)))) {
       continue;
     }
     kept.push(part);
   }
+
   const text = kept.join(' ').replace(/\s+/g, ' ').trim();
   const tags = details.map((d) => d.tag);
 
@@ -86,6 +93,7 @@ function composeOne(bank: Bank, input: ComposeInput, strategy: Strategy): Varian
     strategy,
     text,
     detailTags: tags,
+    selectedDetails: details,
     hasSecondPerson: tags.includes('ikinci_kisi'),
     hasLocation: tags.includes('konum'),
   };
