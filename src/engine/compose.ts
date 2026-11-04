@@ -70,7 +70,8 @@ function composeOne(bank: Bank, input: ComposeInput, strategy: Strategy): Varian
 
   const custom = input.situation === 'ozel' ? customSentence(input.situationCustom) : null;
   const opening = custom ?? pickOpening(bank, input.style, rng);
-  const count = strategy === 'sade' ? 0 : detailCountFor(input.intensity);
+  // spec §10.2: sade = detay yok, duygusal = tek detay, detaylı = şiddete göre 1-3 detay
+  const count = strategy === 'sade' ? 0 : strategy === 'duygusal' ? Math.min(1, detailCountFor(input.intensity)) : detailCountFor(input.intensity);
   const details = pickDetails(bank, count, rng);
   const kind: CloserKind = strategy === 'sade' ? 'kisa' : strategy === 'duygusal' ? 'empati' : 'normal';
   const closer = pickCloser(bank, input.style, kind, rng);

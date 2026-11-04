@@ -34,6 +34,20 @@ describe('compose', () => {
     }
   });
 
+  it('duygusal strateji tek detay kullanır (spec §10.2)', () => {
+    const drafts = compose({ ...base, intensity: 10 });
+    const duygusal = drafts.find((d) => d.strategy === 'duygusal')!;
+    expect(duygusal.detailTags).toHaveLength(1);
+  });
+
+  it('detaylı ve duygusal varyantlar aynı detayları tekrarlamaz', () => {
+    const drafts = compose({ ...base, intensity: 10 });
+    const detayli = drafts.find((d) => d.strategy === 'detayli')!;
+    const duygusal = drafts.find((d) => d.strategy === 'duygusal')!;
+    expect(duygusal.detailTags.every((t) => !detayli.detailTags.includes(t)) || duygusal.text !== detayli.text).toBe(true);
+    expect(detayli.text).not.toBe(duygusal.text);
+  });
+
   it('detay sayısı şiddetle artar ve 3 ile sınırlıdır', () => {
     expect(compose({ ...base, intensity: 1 })[1]!.detailTags).toHaveLength(0);
     expect(compose({ ...base, intensity: 6 })[1]!.detailTags).toHaveLength(2);
