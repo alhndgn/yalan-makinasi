@@ -1,0 +1,183 @@
+import { useEffect, useState } from 'react';
+import { CHANNELS, DEFAULT_FORM, SITUATIONS, STYLES, TARGETS } from '../../../shared/constants.ts';
+import type { GenerateRequest, Variant } from '../../../shared/schema.ts';
+import { IntensitySlider } from '../components/IntensitySlider.tsx';
+import { ApiError, api, type RiskPreview } from '../lib/api.ts';
+
+type Props = { onGenerated: (variants: Variant[]) => void };
+
+const RISK_LABEL: Record<RiskPreview['level'], string> = { dusuk: 'DÜŞÜK', orta: 'ORTA', yuksek: 'YÜKSEK' };
+
+export function Generator({ onGenerated }: Props) {
+  const [form, setForm] = useState<GenerateRequest>({ ...DEFAULT_FORM });
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<RiskPreview | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      api
+        .previewRisk({ target: form.target, situation: form.situation, channel: form.channel, intensity: form.intensity })
+        .then(setPreview)
+        .catch(() => setPreview(null));
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [form.target, form.situation, form.channel, form.intensity]);
+
+  async function generate() {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await api.generate({ ...form, salt: String(Date.now()) });
+      setVariants(result);
+      onGenerated(result);
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : 'UNKNOWN';
+      setError(
+        code === 'RATE_LIMITED'
+          ? 'Biraz bekle, çok hızlı üretiyorsun.'
+          : code === 'ABUSE_BLOCKED'
+            ? 'Bu tür bir metin üretemem (belge, rapor, resmî kayıt).'
+            : 'Bir şeyler ters gitti, tekrar dene.',
+      );
+      setVariants([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const situationLabel = SITUATIONS.find((s) => s.id === form.situation)?.label ?? '';
+
+  return (
+    <section className="stack">
+      <header className="hero">
+        <p className="eyebrow">kıvırma asistanı</p>
+        <h1 className="title">Yalan Makinası</h1>
+        <p className="muted">Bir bahane değil, savunulabilir bir hikâye.</p>
+      </header>
+
+      <div className="card">
+        <p className="label">Kime?</p>
+        <div className="chips" role="group" aria-label="Kime">
+          {TARGETS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`chip ${form.target === t.id ? 'is-active' : ''}`}
+              aria-pressed={form.target === t.id}
+              onClick={() => setForm({ ...form, target: t.id })}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="label">Ne oldu?</p>
+        <div className="chips" role="group" aria-label="Ne oldu">
+          {SITUATIONS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`chip ${form.situation === s.id ? 'is-active' : ''}`}
+              aria-pressed={form.situation === s.id}
+              onClick={() => setForm({ ...form, situation: s.id })}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {form.situation === 'ozel' && (
+          <input
+            className="input"
+            placeholder="Durumu kısaca yaz (en fazla 180 karakter)"
+            maxLength={180}
+            value={form.situationCustom ?? ''}
+            onChange={(e) => setForm({ ...form, situationCustom: e.target.value })}
+          />
+        )}
+
+        <div className="grid2">
+          <div>
+            <p className="label">Kanal</p>
+            <div className="seg">
+              {CHANNELS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={form.channel === c.id ? 'is-active' : ''}
+                  onClick={() => setForm({ ...form, channel: c.id })}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="label">Ton</p>
+            <div className="seg">
+              {STYLES.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={form.style === s.id ? 'is-active' : ''}
+                  onClick={() => setForm({ ...form, style: s.id })}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <IntensitySlider value={form.intensity} onChange={(value) => setForm({ ...form, intensity: value })} />
+
+        {preview && (
+          <p className={`preview risk-${preview.level}`} data-testid="risk-preview">
+            Şu an: {RISK_LABEL[preview.level]} {preview.score}/100
+          </p>
+        )}
+
+        <button className="btn-primary" type="button" onClick={generate} disabled={loading}>
+          {loading ? 'Yazıyorum…' : 'Üret'}
+        </button>
+
+        {error && (
+          <p className="alert" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+
+      {variants.length > 0 && (
+        <div className="stack">
+          <p className="label">3 alternatif · {situationLabel}</p>
+          {variants.map((v, i) => (
+            <article className="card variant" data-testid="variant-card" key={i}>
+              <div className="variant-head">
+                <span className="tag">{v.strategy}</span>
+                <span className={`risk risk-${v.riskLevel}`}>
+                  {RISK_LABEL[v.riskLevel]} {v.riskScore}/100
+                </span>
+              </div>
+              <p className="variant-text">{v.text}</p>
+              {v.queries.length > 0 && (
+                <ul className="queries">
+                  {v.queries.map((q) => (
+                    <li key={q.q}>
+                      <span className="q">{q.q}</span>
+                      <span className="a">{q.a}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+
+      <p className="fineprint">Bu uygulama eğlence amaçlıdır. Resmî belge veya sağlık raporu üretmez.</p>
+    </section>
+  );
+}
