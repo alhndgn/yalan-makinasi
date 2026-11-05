@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { INTENSITY_MAX, INTENSITY_MIN, STYLES } from '../../../shared/constants.ts';
 import type { AiMode } from '../../../shared/constants.ts';
-import { api } from '../lib/api.ts';
+import { data } from '../lib/data.ts';
 import { readDefaults, writeDefaults, type Defaults } from '../lib/defaults.ts';
 
 type Props = { aiMode: AiMode; onBack: () => void };
@@ -23,15 +23,15 @@ export function Settings({ aiMode, onBack }: Props) {
 
   async function exportLedger() {
     try {
-      const data = await api.listLies();
-      const blob = new Blob([JSON.stringify(data.items, null, 2)], { type: 'application/json' });
+      const ledger = await data.listLies();
+      const blob = new Blob([JSON.stringify(ledger.items, null, 2)], { type: 'application/json' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = 'yalan-defteri.json';
       link.click();
       const href = link.href;
       setTimeout(() => URL.revokeObjectURL(href), 1000);
-      setNote(`${data.items.length} kayıt dışa aktarıldı.`);
+      setNote(`${ledger.items.length} kayıt dışa aktarıldı.`);
     } catch {
       setNote('Dışa aktarma başarısız.');
     }
@@ -40,7 +40,7 @@ export function Settings({ aiMode, onBack }: Props) {
   async function deleteAll() {
     if (typeof confirm === 'function' && !confirm('Defterdeki tüm kayıtlar silinecek. Emin misin?')) return;
     try {
-      const res = await api.deleteAll();
+      const res = await data.deleteAll();
       setNote(`${res.deleted} kayıt silindi.`);
     } catch {
       setNote('Silme başarısız.');

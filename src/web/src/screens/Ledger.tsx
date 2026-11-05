@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { SavedLie } from '../../../shared/schema.ts';
 import type { Status } from '../../../shared/constants.ts';
-import { api } from '../lib/api.ts';
+import { data } from '../lib/data.ts';
 import { TARGET_LABEL, formatWhen } from '../lib/format.ts';
 
 type Conflict = { lieId: string; createdAt: number; text: string };
@@ -17,16 +17,14 @@ export function Ledger({ conflicts: conflictsProp }: Props) {
   const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
-    api
+    data
       .listLies()
       .then((r) => {
         setItems(r.items);
         if (conflictsProp === undefined) {
-          fetch('/api/lies/conflicts', {
-            headers: { 'x-device-id': localStorage.getItem('ym_device') ?? '' },
-          })
-            .then((res) => res.json())
-            .then((data: { conflicts?: Conflict[] }) => setConflicts(data.conflicts ?? []))
+          data
+            .conflicts()
+            .then((result) => setConflicts(result.conflicts ?? []))
             .catch(() => setConflicts([]));
         }
       })
@@ -38,7 +36,7 @@ export function Ledger({ conflicts: conflictsProp }: Props) {
     const previous = item.status;
     setItems((prev) => prev?.map((p) => (p.id === item.id ? { ...p, status: next } : p)) ?? null);
     try {
-      await api.updateStatus(item.id, next);
+      await data.updateStatus(item.id, next);
     } catch {
       setItems((prev) => prev?.map((p) => (p.id === item.id ? { ...p, status: previous } : p)) ?? null);
       setNote('Durum güncellenemedi.');
@@ -48,7 +46,7 @@ export function Ledger({ conflicts: conflictsProp }: Props) {
   async function remove(id: string) {
     setItems((prev) => prev?.filter((p) => p.id !== id) ?? null);
     try {
-      await api.deleteLie(id);
+      await data.deleteLie(id);
     } catch {
       setNote('Kayıt silinemedi.');
     }

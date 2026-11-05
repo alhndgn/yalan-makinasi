@@ -1,5 +1,5 @@
 import type { GenerateRequest, SavedLie, Variant } from '../../../shared/schema.ts';
-import type { TargetId } from '../../../shared/constants.ts';
+import type { Status, TargetId } from '../../../shared/constants.ts';
 import { getDeviceId } from './deviceId.ts';
 
 export class ApiError extends Error {
@@ -56,7 +56,7 @@ export const api = {
     return call<{ items: SavedLie[] }>('/api/lies?limit=50');
   },
 
-  updateStatus(id: string, status: 'tuttu' | 'tutmadı'): Promise<{ ok: true }> {
+  updateStatus(id: string, status: Status): Promise<{ ok: true }> {
     return call<{ ok: true }>(`/api/lies/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
   },
 
@@ -66,5 +66,11 @@ export const api = {
 
   deleteAll(): Promise<{ deleted: number }> {
     return call<{ deleted: number }>('/api/lies', { method: 'DELETE' });
+  },
+
+  conflicts(): Promise<{ conflicts: { lieId: string; target: TargetId; text: string; createdAt: number; overlap: string }[] }> {
+    return call<{ conflicts: { lieId: string; target: TargetId; text: string; createdAt: number; overlap: string }[] }>(
+      '/api/lies/conflicts',
+    );
   },
 };

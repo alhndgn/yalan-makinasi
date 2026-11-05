@@ -4,7 +4,8 @@ import { readDefaults } from '../lib/defaults.ts';
 import type { GenerateRequest, Variant } from '../../../shared/schema.ts';
 import { IntensitySlider } from '../components/IntensitySlider.tsx';
 import { VariantCard } from '../components/VariantCard.tsx';
-import { ApiError, api, type RiskPreview } from '../lib/api.ts';
+import { ApiError, type RiskPreview } from '../lib/api.ts';
+import { data } from '../lib/data.ts';
 
 type Props = { onGenerated: (variants: Variant[]) => void };
 
@@ -26,7 +27,7 @@ export function Generator({ onGenerated }: Props) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      api
+      data
         .previewRisk({ target: form.target, situation: form.situation, channel: form.channel, intensity: form.intensity })
         .then(setPreview)
         .catch(() => setPreview(null));
@@ -39,7 +40,7 @@ export function Generator({ onGenerated }: Props) {
     setError(null);
     try {
       const request = { ...form };
-      const result = await api.generate({ ...request, salt: String(Date.now()) });
+      const result = await data.generate({ ...request, salt: String(Date.now()) });
       setVariants(result.variants);
       setUsedForm(request);
       setProvider(result.provider ?? 'template');
@@ -61,7 +62,7 @@ export function Generator({ onGenerated }: Props) {
 
   async function saveVariant(variant: Variant) {
     try {
-      await api.saveLie({ variant, form: usedForm ?? form, provider });
+      await data.saveLie({ variant, form: usedForm ?? form, provider });
       setSavedNote("Defter'e kaydedildi.");
       setTimeout(() => setSavedNote(null), 2200);
     } catch {

@@ -37,6 +37,25 @@ npm test           # 61 test: motor, API, arayüz
 Üretim varsayılan olarak **şablon motorunda** çalışır (ağ yok, <50 ms). `AI_MODE=ollama|openrouter`
 seçilirse önce model denenir; model hata verirse sessizce şablona dönülür.
 
+## Telefon (APK)
+
+İki mod var; aynı arayüz, aynı motor:
+
+| Mod | Veri | Kullanım |
+|---|---|---|
+| `server` (varsayılan) | Fastify + SQLite, tarayıcıdan | `npm run build && npm start` |
+| `local` (`VITE_LOCAL_ENGINE=1`) | Tarayıcı içi motor + `localStorage` | APK / çevrimdışı |
+
+```bash
+bash scripts/build-apk.sh      # web (local mod) + cap sync + gradle assembleDebug
+# çıktı: android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+- APK internet gerektirmez; kayıtlar cihazda (`localStorage`, `ym_lies_v1`).
+- Bu bir **debug** APK'dır: telefona elle kurulur (bilinmeyen kaynak izni). Play Store için imzalı
+  release build + keystore gerekir (`android/keystore.properties` + `bundleRelease`).
+- Android projesini güncelledikten sonra: `npx cap sync android`.
+
 ## Durum
 
 - v0.1 tamam: üretici, şiddet kaydırıcısı, risk + sorgu provası, Yalan Defteri + çelişki uyarısı,
