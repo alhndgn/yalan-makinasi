@@ -1,14 +1,33 @@
 import { useEffect, useState } from 'react';
 import type { AiMode } from '../../shared/constants.ts';
+import { TeqSplash } from './components/TeqSplash.tsx';
+import { YalanMark } from './components/YalanMark.tsx';
 import { Generator } from './screens/Generator.tsx';
 import { Ledger } from './screens/Ledger.tsx';
 import { Settings } from './screens/Settings.tsx';
 
 type Tab = 'uret' | 'defter' | 'ayarlar';
 
+const SPLASH_FLAG = 'ym_splash_done';
+const TAGLINE = 'bir bahane değil, savunulabilir bir hikâye';
+
+function splashHoldRequested(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('splash') === 'hold';
+}
+
+function splashAlreadySeen(): boolean {
+  try {
+    return sessionStorage.getItem(SPLASH_FLAG) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function App() {
   const [tab, setTab] = useState<Tab>('uret');
   const [aiMode, setAiMode] = useState<AiMode>('off');
+  const [showSplash, setShowSplash] = useState(() => splashHoldRequested() || !splashAlreadySeen());
 
   useEffect(() => {
     fetch('/api/health')
@@ -19,6 +38,24 @@ export function App() {
 
   return (
     <main className="shell">
+      {showSplash && (
+        <TeqSplash
+          appName="Yalan Makinası"
+          tagline={TAGLINE}
+          accent="#A83A30"
+          mark={<YalanMark size={72} color="#A83A30" needle="#1C1A17" />}
+          hold={splashHoldRequested()}
+          onDone={() => {
+            try {
+              sessionStorage.setItem(SPLASH_FLAG, '1');
+            } catch {
+              /* yoksay */
+            }
+            setShowSplash(false);
+          }}
+        />
+      )}
+
       {tab === 'uret' && <Generator onGenerated={() => {}} />}
       {tab === 'defter' && <Ledger />}
       {tab === 'ayarlar' && <Settings aiMode={aiMode} onBack={() => setTab('uret')} />}

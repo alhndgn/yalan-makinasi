@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Teq Studio açılış zemini: web splash'i ile aynı kâğıt rengi (beyaz flaş olmasın) -->
+    <color name="splashPaper">#ECE5D7</color>
+</resources>

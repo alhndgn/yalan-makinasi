@@ -56,6 +56,20 @@ bash scripts/build-apk.sh      # web (local mod) + cap sync + gradle assembleDeb
   release build + keystore gerekir (`android/keystore.properties` + `bundleRelease`).
 - Android projesini güncelledikten sonra: `npx cap sync android`.
 
+## Açılış ekranı (Teq Studio ortak iskelet)
+
+`src/web/src/components/TeqSplash.tsx` — her uygulama kendi adı, vaadi, logosu ve vurgu rengiyle kullanır;
+“Developed by Teq Studio” imzası köşede sabittir. Logo ayrı bileşen (`YalanMark.tsx`).
+
+```tsx
+<TeqSplash appName="Yalan Makinası" tagline="…" accent="#A83A30" mark={<YalanMark />} onDone={…} />
+```
+
+- Soğuk açılışta ~1,2 sn, ardından 400 ms kararma; `sessionStorage` ile oturum başına bir kez.
+- `prefers-reduced-motion` açıksa animasyonsuz, 260 ms.
+- Tasarım incelemesi: `?splash=hold` ekranı ekranda tutar.
+- Android tarafında `AppTheme.NoActionBarLaunch` zemini `@color/splashPaper` (#ECE5D7) — beyaz flaş yok.
+
 ## Durum
 
 - v0.1 tamam: üretici, şiddet kaydırıcısı, risk + sorgu provası, Yalan Defteri + çelişki uyarısı,
