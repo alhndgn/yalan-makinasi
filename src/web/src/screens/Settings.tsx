@@ -49,10 +49,8 @@ export function Settings({ aiMode, onBack }: Props) {
 
   return (
     <section className="stack">
-      <header className="hero">
-        <p className="eyebrow">ayarlar</p>
-        <h1 className="title">Ayarlar</h1>
-      </header>
+      <h1 className="h1">Ayarlar</h1>
+      <p className="muted">Motor, varsayılanlar ve verilerin.</p>
 
       <div className="card">
         <p className="label">Yapay zekâ</p>
@@ -125,7 +123,7 @@ export function Settings({ aiMode, onBack }: Props) {
         </p>
       )}
 
-      <p className="fineprint">Yalan Makinası · v0.1.0</p>
+      <p className="fineprint">Yalan Makinası · v0.2.0</p>
     </section>
   );
 }

@@ -56,7 +56,7 @@ export function buildApp(opts: BuildAppOptions = {}): FastifyInstance {
     return reply.code(status).send({ error: { code: error.code ?? 'BAD_REQUEST', message: error.message } });
   });
 
-  app.get('/api/health', async () => ({ ok: true, aiMode, version: '0.1.0' }));
+  app.get('/api/health', async () => ({ ok: true, aiMode, version: '0.2.0' }));
 
   registerGenerateRoutes(app, db, provider);
   registerLieRoutes(app, db);

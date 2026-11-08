@@ -66,11 +66,8 @@ export function Ledger({ conflicts: conflictsProp }: Props) {
 
   return (
     <section className="stack">
-      <header className="hero">
-        <p className="eyebrow">geçmiş</p>
-        <h1 className="title">Yalan Defteri</h1>
-        <p className="muted">Kime ne dedin, tuttu mu — hepsi burada.</p>
-      </header>
+      <h1 className="h1">Yalan Defteri</h1>
+      <p className="muted">Kime ne dedin, tuttu mu — hepsi burada.</p>
 
       {conflicts.length > 0 && (
         <div className="conflict-banner" role="status">

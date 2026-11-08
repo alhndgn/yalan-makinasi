@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<title>Yalan Makinası — Sade ana ekran</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f2efea;font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#141312;padding:40px 48px 56px}
+  .head{margin-bottom:28px}
+  .head h1{font-size:19px;font-weight:650;letter-spacing:-.01em}
+  .head p{margin-top:5px;font-size:12.5px;color:#6e6a64}
+  .row{display:flex;gap:40px;align-items:flex-start}
+  .col{display:flex;flex-direction:column;gap:12px}
+  .cap{font-size:12px;color:#6e6a64;max-width:390px;line-height:1.5}
+  .cap b{color:#d0342c}
+
+  .phone{width:390px;height:844px;border-radius:40px;overflow:hidden;background:#fff;position:relative;
+    box-shadow:0 24px 60px rgba(20,19,18,.16),0 0 0 1px rgba(20,19,18,.08)}
+  .sb{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:13px;font-weight:600;color:#141312}
+  .sb .r{display:flex;gap:5px;align-items:center}
+  .bar{width:3px;background:#141312;border-radius:2px}
+
+  .screen{padding:0 22px 96px}
+  .topline{display:flex;align-items:center;justify-content:space-between;margin:6px 0 26px}
+  .brand{display:flex;align-items:center;gap:8px}
+  .brand span{font-size:12px;font-weight:600;letter-spacing:.02em;color:#6e6a64}
+  .ghost{font-size:12px;color:#6e6a64;background:none;border:0;font-family:inherit}
+
+  h1{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+  .sub{margin-top:6px;font-size:13px;color:#6e6a64}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .chip{border:1px solid #e7e1d9;background:#fff;color:#2a2825;border-radius:999px;padding:11px 15px;font-size:14px;font-family:inherit}
+  .chip.on{background:#d0342c;border-color:#d0342c;color:#fff;font-weight:600}
+
+  .rule{height:1px;background:#f0ece6;margin:26px 0}
+
+  h2{font-size:17px;font-weight:650;letter-spacing:-.01em}
+
+  .intensity{margin-top:26px}
+  .intensity .lab{display:flex;align-items:baseline;justify-content:space-between}
+  .intensity .lab b{font-size:13px;font-weight:600;color:#2a2825}
+  .intensity .lab span{font-size:12.5px;color:#6e6a64}
+  .val{display:flex;align-items:baseline;gap:8px;margin-top:10px}
+  .val strong{font-size:34px;font-weight:750;color:#d0342c;letter-spacing:-.03em;line-height:1}
+  .val em{font-style:normal;font-size:13px;color:#6e6a64}
+  .track{position:relative;height:34px;display:flex;align-items:center;margin-top:8px}
+  .rail{position:absolute;left:0;right:0;height:6px;border-radius:99px;background:#f0ece6}
+  .fill{position:absolute;left:0;height:6px;border-radius:99px;background:#d0342c}
+  .tick{position:absolute;width:1px;height:10px;background:#e2dbd2;transform:translateX(-50%)}
+  .thumb{position:absolute;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid #d0342c;transform:translateX(-50%);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+
+  .cta{margin-top:30px;width:100%;height:58px;border:0;border-radius:14px;background:#d0342c;color:#fff;
+    font-family:inherit;font-size:16px;font-weight:700;letter-spacing:.01em;display:flex;align-items:center;justify-content:center;gap:10px}
+  .cta small{font-weight:500;opacity:.75;font-size:12px}
+  .more{margin-top:14px;text-align:center;font-size:12.5px;color:#6e6a64}
+
+  .tabs{position:absolute;left:0;right:0;bottom:0;height:74px;background:#fff;border-top:1px solid #f0ece6;
+    display:flex;align-items:center;justify-content:space-around;padding-bottom:8px}
+  .tab{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#a9a29a;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .tab.on{color:#d0342c;font-weight:700}
+  .tab i{width:18px;height:18px;border-radius:6px;border:1.5px solid currentColor;display:block}
+  .tab.on i{background:#d0342c;border-color:#d0342c}
+
+  /* akordeon varyantı */
+  .step{border:1px solid #f0ece6;border-radius:16px;padding:16px 16px 18px;margin-bottom:10px}
+  .step.open{border-color:#f3d9d6;background:#fffdfc}
+  .step .hd{display:flex;align-items:center;gap:10px}
+  .num{width:22px;height:22px;border-radius:50%;background:#f7f3ee;color:#6e6a64;font-size:11px;font-weight:700;display:grid;place-items:center}
+  .step.open .num{background:#d0342c;color:#fff}
+  .step .ttl{font-size:14px;font-weight:600;flex:1}
+  .step .picked{font-size:13px;color:#6e6a64}
+  .step .chg{font-size:12px;color:#d0342c;font-weight:600;background:none;border:0;font-family:inherit}
+
+  /* sonuç ekranı */
+  .rescard{border:1px solid #f0ece6;border-radius:16px;padding:16px;margin-bottom:12px}
+  .reshd{display:flex;align-items:center;justify-content:space-between}
+  .tag{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#a9a29a;font-weight:600}
+  .risk{font-size:11px;font-weight:700;color:#d0342c;border:1px solid #f3c9c5;background:#fdf3f2;border-radius:999px;padding:5px 9px}
+  .restext{margin-top:12px;font-size:16px;line-height:1.55;color:#1d1b19}
+  .qlist{margin-top:14px;padding-top:12px;border-top:1px solid #f0ece6}
+  .qlist .qh{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#a9a29a;font-weight:600;margin-bottom:8px}
+  .qa{margin-bottom:8px}
+  .qa .q{font-size:12px;color:#6e6a64}
+  .qa .a{font-size:13.5px;color:#1d1b19;margin-top:2px}
+  .acts{display:flex;gap:8px;margin-top:14px}
+  .acts button{flex:1;height:40px;border-radius:10px;border:1px solid #e7e1d9;background:#fff;color:#2a2825;font-family:inherit;font-size:12.5px}
+  .acts button.primary{background:#d0342c;border-color:#d0342c;color:#fff;font-weight:600}
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>Ana ekran · sade yön (beyaz + kırmızı)</h1>
+    <p>Aynı üç karar, çok daha az kutu. Kırmızı yalnızca “seçili” ve “aksiyon” için — süsleme yok.</p>
+  </div>
+
+  <div class="row">
+    <!-- A -->
+    <div class="col">
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span class="r"><span class="bar" style="height:7px"></span><span class="bar" style="height:9px"></span><span class="bar" style="height:11px"></span></span></div>
+        <div class="screen">
+          <div class="topline">
+            <div class="brand">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#d0342c" stroke-width="1.6"/><line x1="12" y1="12" x2="17" y2="8.5" stroke="#141312" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="1.8" fill="#d0342c"/></svg>
+              <span>Yalan Makinası</span>
+            </div>
+            <button class="ghost">Defter ↗</button>
+          </div>
+
+          <h1>Kime söyleyeceksin?</h1>
+          <div class="chips">
+            <button class="chip on">Sevgili</button>
+            <button class="chip">Patron</button>
+            <button class="chip">Anne-baba</button>
+            <button class="chip">Arkadaş</button>
+            <button class="chip">Diğer</button>
+          </div>
+
+          <div class="rule"></div>
+
+          <h2>Ne oldu?</h2>
+          <div class="chips">
+            <button class="chip on">Geç kaldım</button>
+            <button class="chip">Gidemedim</button>
+            <button class="chip">Parayı harcadım</button>
+            <button class="chip">Kendim yazacağım</button>
+          </div>
+
+          <div class="intensity">
+            <div class="lab"><b>Yalan şiddeti</b><span>kaydır</span></div>
+            <div class="val"><strong>6</strong><em>Kıvırma · risk orta</em></div>
+            <div class="track">
+              <div class="rail"></div>
+              <div class="fill" style="width:56%"></div>
+              <span class="tick" style="left:11%"></span><span class="tick" style="left:22%"></span><span class="tick" style="left:33%"></span><span class="tick" style="left:44%"></span><span class="tick" style="left:56%"></span><span class="tick" style="left:67%"></span><span class="tick" style="left:78%"></span><span class="tick" style="left:89%"></span>
+              <div class="thumb" style="left:56%"></div>
+            </div>
+          </div>
+
+          <button class="cta">Üret <small>3 alternatif</small></button>
+          <div class="more">Ton · Kanal · Ayarlar</div>
+        </div>
+        <div class="tabs">
+          <div class="tab on"><i></i>Üret</div>
+          <div class="tab"><i></i>Defter</div>
+          <div class="tab"><i></i>Ayarlar</div>
+        </div>
+      </div>
+      <div class="cap"><b>A · Tek kolon</b> — 5 hedef, 4 durum, tek kaydırıcı, tek kırmızı buton. Ton/kanal “Ayarlar”a indi.</div>
+    </div>
+
+    <!-- B -->
+    <div class="col">
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span class="r"><span class="bar" style="height:7px"></span><span class="bar" style="height:9px"></span><span class="bar" style="height:11px"></span></span></div>
+        <div class="screen">
+          <div class="topline">
+            <div class="brand">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#d0342c" stroke-width="1.6"/><line x1="12" y1="12" x2="17" y2="8.5" stroke="#141312" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="1.8" fill="#d0342c"/></svg>
+              <span>Yalan Makinası</span>
+            </div>
+            <button class="ghost">Defter ↗</button>
+          </div>
+
+          <h1>Üç adım</h1>
+          <p class="sub">Sırayla seç, gerisi kendiliğinden.</p>
+
+          <div style="margin-top:22px">
+            <div class="step">
+              <div class="hd"><span class="num">1</span><span class="ttl">Kime?</span><span class="picked">Sevgili</span><button class="chg">değiştir</button></div>
+            </div>
+
+            <div class="step open">
+              <div class="hd"><span class="num">2</span><span class="ttl">Ne oldu?</span></div>
+              <div class="chips" style="margin-top:12px">
+                <button class="chip on">Geç kaldım</button>
+                <button class="chip">Gidemedim</button>
+                <button class="chip">Parayı harcadım</button>
+                <button class="chip">Kendim yazacağım</button>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="hd"><span class="num">3</span><span class="ttl">Yalan şiddeti</span><span class="picked">6 · Kıvırma</span><button class="chg">değiştir</button></div>
+            </div>
+          </div>
+
+          <button class="cta" style="margin-top:22px">Üret <small>3 alternatif</small></button>
+          <div class="more">Ton · Kanal</div>
+        </div>
+        <div class="tabs">
+          <div class="tab on"><i></i>Üret</div>
+          <div class="tab"><i></i>Defter</div>
+          <div class="tab"><i></i>Ayarlar</div>
+        </div>
+      </div>
+      <div class="cap"><b>B · Üç adım</b> — her adım tek kart; seçilen kapanıp tek satıra iner. Daha yönlendirici, bir tık fazla.</div>
+    </div>
+
+    <!-- C -->
+    <div class="col">
+      <div class="phone">
+        <div class="sb"><span>9:41</span><span class="r"><span class="bar" style="height:7px"></span><span class="bar" style="height:9px"></span><span class="bar" style="height:11px"></span></span></div>
+        <div class="screen">
+          <div class="topline">
+            <button class="ghost">← Geri</button>
+            <span class="tag" style="color:#a9a29a">3 alternatif</span>
+          </div>
+
+          <div class="rescard">
+            <div class="reshd"><span class="tag">Sade</span><span class="risk">ORTA · 45</span></div>
+            <p class="restext">Geç kaldım, haber de veremedim. Metro arıza yaptı, yirmi dakika bekledim. Kusura bakma, bir daha olmayacak.</p>
+            <div class="qlist">
+              <div class="qh">Karşı taraf ne sorar</div>
+              <div class="qa"><div class="q">Metro mu sorun çıkardı?</div><div class="a">Metro arıza yaptı, yirmi dakika bekledim.</div></div>
+              <div class="qa"><div class="q">Neden haber vermedin?</div><div class="a">Telefon çekmiyordu, yeni gördüm.</div></div>
+            </div>
+            <div class="acts">
+              <button class="primary">Kopyala</button>
+              <button>Kaydet</button>
+              <button>↻</button>
+            </div>
+          </div>
+
+          <div class="rescard" style="opacity:.55">
+            <div class="reshd"><span class="tag">Detaylı</span><span class="risk">YÜKSEK · 72</span></div>
+            <p class="restext">Yolda trafik vardı, metro da arıza yaptı. Annem aradı, ona uğramam gerekti…</p>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab on"><i></i>Üret</div>
+          <div class="tab"><i></i>Defter</div>
+          <div class="tab"><i></i>Ayarlar</div>
+        </div>
+      </div>
+      <div class="cap"><b>C · Sonuç</b> — beyaz kart, kırmızı yalnız risk ve ana aksiyonda. Kartlar üst üste değil, kaydırmalı.</div>
+    </div>
+  </div>
+</body>
+</html>

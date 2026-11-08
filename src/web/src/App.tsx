@@ -9,11 +9,22 @@ import { Settings } from './screens/Settings.tsx';
 type Tab = 'uret' | 'defter' | 'ayarlar';
 
 const SPLASH_FLAG = 'ym_splash_done';
+/** Açılış ekranının ekranda kalma süresi (ms). Yayın öncesi 1500-2000'e indirilebilir. */
+const SPLASH_MS = 5000;
 const TAGLINE = 'bir bahane değil, savunulabilir bir hikâye';
 
+function splashParam(): 'hold' | 'off' | null {
+  if (typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get('splash');
+  return value === 'hold' || value === 'off' ? value : null;
+}
+
 function splashHoldRequested(): boolean {
-  if (typeof window === 'undefined') return false;
-  return new URLSearchParams(window.location.search).get('splash') === 'hold';
+  return splashParam() === 'hold';
+}
+
+function splashSkipped(): boolean {
+  return splashParam() === 'off';
 }
 
 function splashAlreadySeen(): boolean {
@@ -24,10 +35,16 @@ function splashAlreadySeen(): boolean {
   }
 }
 
+function initialTab(): Tab {
+  if (typeof window === 'undefined') return 'uret';
+  const value = new URLSearchParams(window.location.search).get('tab');
+  return value === 'defter' || value === 'ayarlar' ? value : 'uret';
+}
+
 export function App() {
-  const [tab, setTab] = useState<Tab>('uret');
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [aiMode, setAiMode] = useState<AiMode>('off');
-  const [showSplash, setShowSplash] = useState(() => splashHoldRequested() || !splashAlreadySeen());
+  const [showSplash, setShowSplash] = useState(() => splashHoldRequested() || (!splashSkipped() && !splashAlreadySeen()));
 
   useEffect(() => {
     fetch('/api/health')
@@ -44,6 +61,7 @@ export function App() {
           tagline={TAGLINE}
           accent="#A83A30"
           mark={<YalanMark size={72} color="#A83A30" needle="#1C1A17" />}
+          durationMs={SPLASH_MS}
           hold={splashHoldRequested()}
           onDone={() => {
             try {
