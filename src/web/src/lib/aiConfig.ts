@@ -1,4 +1,9 @@
-/** Cihazda saklanan AI sunucusu ayarı (Ayarlar ekranından düzenlenir). */
+/**
+ * AI yapılandırması.
+ *
+ * Öncelik: derleme zamanı ortam değişkenleri (VITE_AI_*) > cihazda kayıtlı ayar > kapalı.
+ * Üretim APK'sında değerler gömülüdür; kullanıcı hiçbir ayar görmez.
+ */
 export type AiConfig = {
   enabled: boolean;
   baseUrl: string;
@@ -15,20 +20,41 @@ export const DEFAULT_AI: AiConfig = {
   apiKey: '',
 };
 
+export type EnvLike = Record<string, string | undefined>;
+
+/** Saf fonksiyon: test edilebilir, yan etkisi yok. */
+export function resolveAiConfig(env: EnvLike, stored: Partial<AiConfig> | null = null): AiConfig {
+  const envBase = (env.VITE_AI_BASE_URL ?? '').trim();
+  if (envBase) {
+    return {
+      enabled: true,
+      baseUrl: envBase,
+      model: (env.VITE_AI_MODEL ?? '').trim() || DEFAULT_AI.model,
+      apiKey: (env.VITE_AI_KEY ?? '').trim(),
+    };
+  }
+
+  if (stored) {
+    return {
+      enabled: Boolean(stored.enabled),
+      baseUrl: typeof stored.baseUrl === 'string' ? stored.baseUrl : '',
+      model: typeof stored.model === 'string' && stored.model ? stored.model : DEFAULT_AI.model,
+      apiKey: typeof stored.apiKey === 'string' ? stored.apiKey : '',
+    };
+  }
+
+  return { ...DEFAULT_AI };
+}
+
 export function readAiConfig(): AiConfig {
+  let stored: Partial<AiConfig> | null = null;
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...DEFAULT_AI };
-    const parsed = JSON.parse(raw) as Partial<AiConfig>;
-    return {
-      enabled: Boolean(parsed.enabled),
-      baseUrl: typeof parsed.baseUrl === 'string' ? parsed.baseUrl : '',
-      model: typeof parsed.model === 'string' && parsed.model ? parsed.model : DEFAULT_AI.model,
-      apiKey: typeof parsed.apiKey === 'string' ? parsed.apiKey : '',
-    };
+    if (raw) stored = JSON.parse(raw) as Partial<AiConfig>;
   } catch {
-    return { ...DEFAULT_AI };
+    stored = null;
   }
+  return resolveAiConfig(import.meta.env as unknown as EnvLike, stored);
 }
 
 export function writeAiConfig(config: AiConfig): void {

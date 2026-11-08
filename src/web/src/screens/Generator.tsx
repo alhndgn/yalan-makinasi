@@ -85,13 +85,13 @@ export function Generator({ onGenerated }: Props) {
   const resultForm = usedForm ?? form;
 
   return (
-    <section className="screen">
+    <section className="screen" data-provider={provider}>
       <header className="brandbar">
         <div className="brand">
           <YalanMark size={22} color="#D0342C" needle="#141312" />
           <span>Yalan Makinası</span>
         </div>
-        <span className="tag">{provider === 'template' ? 'şablon motoru' : provider}</span>
+        <span />
       </header>
 
       <h1 className="h1">Üç adım</h1>
