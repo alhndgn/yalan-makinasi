@@ -4,13 +4,13 @@ import { resolveAiConfig } from '../../src/web/src/lib/aiConfig.ts';
 describe('resolveAiConfig', () => {
   it('derleme zamanı adres varsa AI açılır ve model/anahtar oradan gelir', () => {
     const cfg = resolveAiConfig({
-      VITE_AI_BASE_URL: 'https://api.yelsoft.online/v1',
+      VITE_AI_BASE_URL: 'https://opencode.ai/zen/go/v1',
       VITE_AI_MODEL: 'ollamacloud/deepseek-v4.1-flash',
       VITE_AI_KEY: 'gizli',
     });
     expect(cfg).toMatchObject({
       enabled: true,
-      baseUrl: 'https://api.yelsoft.online/v1',
+      baseUrl: 'https://opencode.ai/zen/go/v1',
       model: 'ollamacloud/deepseek-v4.1-flash',
       apiKey: 'gizli',
     });
