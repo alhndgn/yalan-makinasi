@@ -95,6 +95,22 @@ export function Settings({ aiMode, onBack }: Props) {
         >
           {ai.enabled ? 'AI açık — önce AI denenir' : 'AI kapalı — şablon motoru'}
         </button>
+        <div className="chips">
+          <button
+            type="button"
+            className="chip"
+            onClick={() => updateAi({ baseUrl: 'https://api.yelsoft.online/v1', model: 'ollamacloud/deepseek-v4.1-flash' })}
+          >
+            opencode-go (bulut)
+          </button>
+          <button
+            type="button"
+            className="chip"
+            onClick={() => updateAi({ baseUrl: 'http://192.168.1.12/ai/v1', model: 'qwen2.5:14b-instruct-q4_K_M' })}
+          >
+            Yerel VM (3090)
+          </button>
+        </div>
         <input
           className="input"
           placeholder="http://192.168.1.12/ai/v1"
@@ -183,7 +199,7 @@ export function Settings({ aiMode, onBack }: Props) {
         </p>
       )}
 
-      <p className="fineprint">Yalan Makinası · v0.2.0</p>
+      <p className="fineprint">Yalan Makinası · v0.2.1</p>
     </section>
   );
 }
