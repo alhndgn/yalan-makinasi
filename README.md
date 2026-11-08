@@ -70,6 +70,20 @@ bash scripts/build-apk.sh      # web (local mod) + cap sync + gradle assembleDeb
 - Tasarım incelemesi: `?splash=hold` ekranı ekranda tutar.
 - Android tarafında `AppTheme.NoActionBarLaunch` zemini `@color/splashPaper` (#ECE5D7) — beyaz flaş yok.
 
+## AI sunucusu (Everything VM)
+
+Uygulama **AI öncelikli** çalışır: Ayarlar → AI sunucusu doldurulmuşsa önce AI denenir, ulaşılamazsa
+sessizce şablon motoruna düşer (kullanıcı hata görmez).
+
+Kurulum (VM'de root): `bash deploy/everything-ai-setup.sh`
+- Ollama `0.0.0.0:11434`'e dinler, `OLLAMA_ORIGINS=*`
+- nginx `http://192.168.1.12/ai/` → Ollama (CORS + uzun timeout)
+- Model: `qwen2.5:14b-instruct-q4_K_M` (3090'da ~9 GB VRAM; ComfyUI açıkken sığmaz)
+- ufw varsa yalnız LAN'a (`192.168.1.0/24`) 80 ve 11434 açılır
+
+Uygulamada: **Ayarlar → AI sunucusu** → adres `http://192.168.1.12/ai/v1`, model adı, (varsa) anahtar →
+**Bağlantıyı test et**. Android tarafında bu IP için cleartext HTTP izni `network_security_config.xml`'de.
+
 ## Durum
 
 - v0.1 tamam: üretici, şiddet kaydırıcısı, risk + sorgu provası, Yalan Defteri + çelişki uyarısı,

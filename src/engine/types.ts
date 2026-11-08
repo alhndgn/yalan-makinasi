@@ -10,7 +10,7 @@ export type GenerateContext = {
   recent: RecentLie[];
 };
 
-export type ProviderId = 'template' | 'ollama' | 'openrouter';
+export type ProviderId = 'template' | 'ai' | 'ollama' | 'openrouter';
 
 export type GenerateResult = {
   variants: Variant[];

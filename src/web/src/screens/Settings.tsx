@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { INTENSITY_MAX, INTENSITY_MIN, STYLES } from '../../../shared/constants.ts';
+import { DEFAULT_FORM, INTENSITY_MAX, INTENSITY_MIN, STYLES } from '../../../shared/constants.ts';
 import type { AiMode } from '../../../shared/constants.ts';
+import { readAiConfig, writeAiConfig, type AiConfig } from '../lib/aiConfig.ts';
+import { generateWithAi } from '../lib/aiProvider.ts';
 import { data } from '../lib/data.ts';
 import { readDefaults, writeDefaults, type Defaults } from '../lib/defaults.ts';
 
@@ -15,6 +17,28 @@ const AI_LABEL: Record<AiMode, string> = {
 export function Settings({ aiMode, onBack }: Props) {
   const [defaults, setDefaults] = useState<Defaults>(readDefaults);
   const [note, setNote] = useState<string | null>(null);
+  const [ai, setAi] = useState<AiConfig>(readAiConfig);
+  const [testing, setTesting] = useState(false);
+
+  function updateAi(patch: Partial<AiConfig>) {
+    const next = { ...ai, ...patch };
+    setAi(next);
+    writeAiConfig(next);
+  }
+
+  async function testAi() {
+    setTesting(true);
+    setNote(null);
+    const started = Date.now();
+    try {
+      const variants = await generateWithAi({ ...DEFAULT_FORM, intensity: 5 }, ai, 15000);
+      setNote(`Bağlantı tamam · ${Date.now() - started} ms · ${variants.length} varyant geldi`);
+    } catch (err) {
+      setNote(`Bağlanamadım: ${err instanceof Error ? err.message : 'bilinmeyen hata'}`);
+    } finally {
+      setTesting(false);
+    }
+  }
 
   function saveDefaults(next: Defaults) {
     setDefaults(next);
@@ -58,6 +82,42 @@ export function Settings({ aiMode, onBack }: Props) {
         <p className="muted small">
           Şablon motoru her zaman çalışır. Model seçiliyse metinler önce modelden istenir; model yanıt vermezse
           sessizce şablona dönülür.
+        </p>
+      </div>
+
+      <div className="card">
+        <p className="label">AI sunucusu</p>
+        <button
+          type="button"
+          className={`toggle${ai.enabled ? ' is-on' : ''}`}
+          aria-pressed={ai.enabled}
+          onClick={() => updateAi({ enabled: !ai.enabled })}
+        >
+          {ai.enabled ? 'AI açık — önce AI denenir' : 'AI kapalı — şablon motoru'}
+        </button>
+        <input
+          className="input"
+          placeholder="http://192.168.1.12/ai/v1"
+          value={ai.baseUrl}
+          onChange={(e) => updateAi({ baseUrl: e.target.value })}
+        />
+        <input
+          className="input"
+          placeholder="model (örn. qwen2.5:14b-instruct-q4_K_M)"
+          value={ai.model}
+          onChange={(e) => updateAi({ model: e.target.value })}
+        />
+        <input
+          className="input"
+          placeholder="API anahtarı (proxy istiyorsa)"
+          value={ai.apiKey}
+          onChange={(e) => updateAi({ apiKey: e.target.value })}
+        />
+        <button type="button" className="btn-ghost" onClick={() => void testAi()} disabled={testing}>
+          {testing ? 'Deniyorum…' : 'Bağlantıyı test et'}
+        </button>
+        <p className="muted small">
+          AI'ya ulaşılamazsa şablon motoru devreye girer; cevap yine gelir ama daha kuru olur.
         </p>
       </div>
 

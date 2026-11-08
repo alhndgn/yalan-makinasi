@@ -5,6 +5,8 @@ import { prepareLie } from '../../../engine/prepareLie.ts';
 import { templateProvider } from '../../../engine/providers/template.ts';
 import { scoreRisk } from '../../../engine/risk.ts';
 import { countConflicts, type RecentLie } from '../../../engine/types.ts';
+import { aiReady, readAiConfig } from './aiConfig.ts';
+import { generateWithAi } from './aiProvider.ts';
 import { getDeviceId } from './deviceId.ts';
 
 /**
@@ -62,6 +64,15 @@ function toSaved(lie: StoredLie): SavedLie {
 
 export const localData = {
   async generate(body: GenerateRequest & { salt?: string }): Promise<{ variants: Variant[]; provider: string }> {
+    const ai = readAiConfig();
+    if (aiReady(ai)) {
+      try {
+        return { variants: await generateWithAi(body, ai), provider: 'ai' };
+      } catch {
+        // AI'ya ulaşamadık: sessizce şablon motoruna düş, kullanıcı hata görmesin.
+      }
+    }
+
     const result = await templateProvider.generate(body, {
       deviceId: getDeviceId(),
       salt: body.salt ?? String(Date.now()),

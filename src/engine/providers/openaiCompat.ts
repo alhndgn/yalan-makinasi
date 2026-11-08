@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AI_SYSTEM_PROMPT } from '../prompt.ts';
 import { variantSchema } from '../../shared/schema.ts';
 import type { GenerateContext, GenerateResult, LlmProvider, ProviderId } from '../types.ts';
 import { templateProvider } from './template.ts';
@@ -12,17 +13,6 @@ export type OpenAiCompatConfig = {
 };
 
 const responseSchema = z.object({ variants: z.array(variantSchema).length(3) });
-
-const SYSTEM_PROMPT = `Sen Türkçe yazan bir "kıvırma asistanısın". Kullanıcının verdiği bağlama göre üç farklı bahane metni üretirsin.
-
-Kurallar:
-- Yalnızca verilen hedef (target), durum (situation), kanal (channel), ton (style) ve yalan şiddeti (intensity 1-10) sınırında kal.
-- Şiddet arttıkça cümle ve detay sayısı artar; 1-2 tek cümle, 9-10 tam hikâye.
-- Resmî belge, sağlık raporu, imza, fatura, mahkeme/savcılık ile ilgili içerik ÜRETME.
-- Üç strateji üret: "sade", "detayli", "duygusal".
-- Her metin için "queries" alanında karşı tarafın sorabileceği en fazla 3 soru ve o metinle ÇELİŞMEYEN cevaplar yaz.
-- "riskScore" 0-100, "riskLevel" "dusuk" | "orta" | "yuksek".
-- Sadece şu JSON ile yanıt ver: {"variants":[{"text":"","strategy":"sade","riskScore":0,"riskLevel":"dusuk","riskReasons":[],"queries":[{"q":"","a":""}]}]}`;
 
 export function createOpenAiCompatProvider(cfg: OpenAiCompatConfig): LlmProvider {
   return {
@@ -44,7 +34,7 @@ export function createOpenAiCompatProvider(cfg: OpenAiCompatConfig): LlmProvider
             temperature: 0.9,
             response_format: { type: 'json_object' },
             messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'system', content: AI_SYSTEM_PROMPT },
               {
                 role: 'user',
                 content: JSON.stringify({
