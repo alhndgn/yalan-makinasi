@@ -5,6 +5,9 @@ const config: CapacitorConfig = {
   appName: 'Yalan Makinası',
   webDir: 'src/web/dist',
   bundledWebRuntime: false,
+  plugins: {
+    CapacitorHttp: { enabled: true },
+  },
   android: {
     allowMixedContent: false,
   },

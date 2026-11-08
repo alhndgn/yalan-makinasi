@@ -7,6 +7,7 @@ import { getProvider } from '../engine/providers/index.ts';
 import { openDb } from './db.ts';
 import { createRateLimiter } from './rateLimit.ts';
 import { fail } from './routes/helpers.ts';
+import { registerAiRoutes } from './routes/ai.ts';
 import { registerGenerateRoutes } from './routes/generate.ts';
 import { registerLieRoutes } from './routes/lies.ts';
 
@@ -58,6 +59,7 @@ export function buildApp(opts: BuildAppOptions = {}): FastifyInstance {
 
   app.get('/api/health', async () => ({ ok: true, aiMode, version: '0.2.1' }));
 
+  registerAiRoutes(app);
   registerGenerateRoutes(app, db, provider);
   registerLieRoutes(app, db);
 
