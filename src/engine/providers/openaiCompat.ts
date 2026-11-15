@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AI_SYSTEM_PROMPT } from '../prompt.ts';
+import { buildSystemPrompt } from '../prompt.ts';
 import { variantSchema } from '../../shared/schema.ts';
 import type { GenerateContext, GenerateResult, LlmProvider, ProviderId } from '../types.ts';
 import { templateProvider } from './template.ts';
@@ -34,7 +34,7 @@ export function createOpenAiCompatProvider(cfg: OpenAiCompatConfig): LlmProvider
             temperature: 0.9,
             response_format: { type: 'json_object' },
             messages: [
-              { role: 'system', content: AI_SYSTEM_PROMPT },
+              { role: 'system', content: buildSystemPrompt(req.intensity) },
               {
                 role: 'user',
                 content: JSON.stringify({

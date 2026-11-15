@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AI_SYSTEM_PROMPT } from '../../../engine/prompt.ts';
+import { buildSystemPrompt } from '../../../engine/prompt.ts';
 import { variantSchema, type GenerateRequest, type Variant } from '../../../shared/schema.ts';
 import { getDeviceId } from './deviceId.ts';
 import type { AiConfig } from './aiConfig.ts';
@@ -43,7 +43,7 @@ export async function generateWithAi(req: GenerateRequest, cfg: AiConfig, timeou
     temperature: 0.9,
     max_tokens: 1200,
     messages: [
-      { role: 'system', content: AI_SYSTEM_PROMPT },
+      { role: 'system', content: buildSystemPrompt(req.intensity) },
       {
         role: 'user',
         content: JSON.stringify({
