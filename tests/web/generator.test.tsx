@@ -10,17 +10,15 @@ const variants = [
 ];
 
 beforeEach(() => {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () => new Response(JSON.stringify({ variants }), { status: 200 })),
-  );
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ variants }), { status: 200 })));
 });
 
 describe('Generator', () => {
-  it('üret butonu varsayılanlarla istek atar ve 3 kart gösterir', async () => {
+  it('üret butonu varsayılanlarla istek atar ve desteye geçer', async () => {
     render(<Generator onGenerated={() => {}} />);
     await userEvent.click(screen.getByRole('button', { name: /üret/i }));
-    expect(screen.getAllByTestId('variant-card')).toHaveLength(3);
+    expect(await screen.findByTestId('deck')).toBeInTheDocument();
+    expect(screen.getByTestId('deck-text')).toHaveTextContent('Trafik vardı.');
 
     const calls = (fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
     const generateCall = calls.find(([url]) => String(url).includes('/api/generate'))!;

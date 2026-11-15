@@ -15,14 +15,14 @@ beforeEach(() => {
 });
 
 describe('üretim anındaki form', () => {
-  it('üretimden sonra hedef değişse de kayıt üretilen hedefe yazılır', async () => {
+  it('kayıt üretilen hedefe yazılır', async () => {
     render(<Generator onGenerated={() => {}} />);
     await userEvent.click(screen.getByRole('button', { name: /üret/i }));
-    await screen.findAllByTestId('variant-card');
+    await screen.findByTestId('deck');
 
-    // üretimden sonra "Kime?" değiştir
-    await userEvent.click(screen.getByRole('button', { name: 'Patron' }));
-    await userEvent.click(screen.getAllByRole('button', { name: /defter/i })[0]!);
+    await userEvent.click(screen.getByRole('button', { name: /bunu kullan/i }));
+    await screen.findByTestId('detail');
+    await userEvent.click(screen.getByRole('button', { name: /defter/i }));
 
     const calls = (fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
     const save = calls.find(([url]) => String(url).endsWith('/api/lies'))!;

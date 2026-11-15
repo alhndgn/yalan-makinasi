@@ -93,8 +93,8 @@ export function drawShareCard(ctx: CanvasRenderingContext2D, model: ShareCardMod
   ctx.fillText(model.footer, 96, height - 140);
 }
 
-export async function downloadShareCard(input: ShareCardInput, targetLabel: string): Promise<void> {
-  const model = buildShareCardModel({ ...input, targetLabel });
+export async function downloadShareCard(input: ShareCardInput): Promise<void> {
+  const model = buildShareCardModel(input);
   const canvas = document.createElement('canvas');
   canvas.width = model.width;
   canvas.height = model.height;

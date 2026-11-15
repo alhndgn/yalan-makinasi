@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Yalan Makinası — akış v2</title>
+<style>
+  :root{
+    --red:#d0342c; --red-soft:#fdf3f2; --red-line:#f3c9c5;
+    --ink:#141312; --ink-soft:#2a2825; --muted:#6e6a64; --faint:#a9a29a;
+    --line:#efeae3; --line-soft:#f5f1ec; --paper:#fbf9f6;
+    --sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#e9e4dc;font-family:var(--sans);padding:34px 28px;display:flex;gap:26px;align-items:flex-start;color:var(--ink)}
+  .frame{width:390px;height:820px;background:#fff;border-radius:30px;box-shadow:0 18px 50px rgba(20,19,18,.16);overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .cap{position:absolute;top:-24px;left:4px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7c766e;font-weight:700}
+  .phone{position:relative}
+  .body{flex:1;padding:20px 20px 0;display:flex;flex-direction:column;min-height:0}
+
+  /* ortak */
+  .brand{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+  .seal{width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}
+  .brand b{font-size:12px;color:var(--muted);letter-spacing:.02em;font-weight:600}
+  .kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .h{font-size:23px;font-weight:750;letter-spacing:-.02em;line-height:1.22}
+  .sub{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+  /* 1 — yükleniyor */
+  .load{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;text-align:center;padding-bottom:40px}
+  .ring{width:132px;height:132px;position:relative;display:grid;place-items:center}
+  .ring::before,.ring::after{content:'';position:absolute;inset:0;border-radius:50%;border:1.5px solid var(--red-line)}
+  .ring::after{inset:16px;border-style:dashed;border-color:#e7cfcb;animation:spin 9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .ring .stamp{width:64px;height:64px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;letter-spacing:.12em;box-shadow:0 8px 22px rgba(208,52,44,.3);animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .steps-load{display:flex;flex-direction:column;gap:9px;align-items:center;min-height:86px}
+  .steps-load .on{font-size:15px;font-weight:650;color:var(--ink)}
+  .steps-load .off{font-size:13px;color:var(--faint)}
+  .steps-load .done{font-size:13px;color:var(--muted);text-decoration:line-through;text-decoration-color:var(--red-line)}
+  .bar{width:180px;height:3px;border-radius:99px;background:var(--line);overflow:hidden}
+  .bar i{display:block;height:100%;width:42%;background:var(--red);border-radius:99px}
+  .hint{font-size:11.5px;color:var(--faint)}
+
+  /* 2A — istiflenmiş kartlar */
+  .head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+  .meta{font-size:11.5px;color:var(--muted)}
+  .opt{display:flex;gap:12px;padding:16px 15px;border:1px solid var(--line);border-radius:18px;margin-bottom:11px;background:#fff;position:relative;transition:.15s}
+  .opt.first{border-color:var(--red-line);box-shadow:0 10px 26px rgba(208,52,44,.08)}
+  .opt .n{font-family:var(--mono);font-size:11px;color:var(--faint);padding-top:3px;font-weight:600}
+  .opt .txt{flex:1;min-width:0}
+  .rowline{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .tag{font-size:10px;letter-spacing:.1em;font-weight:800;color:var(--muted);text-transform:uppercase}
+  .risk{font-size:10px;font-weight:800;letter-spacing:.06em;padding:2px 7px;border-radius:99px;text-transform:uppercase}
+  .r-mid{background:#fdf6ec;color:#b8791b}
+  .r-low{background:#f0f7f1;color:#3f8a53}
+  .r-high{background:var(--red-soft);color:var(--red)}
+  .opt p{font-size:13.5px;line-height:1.5;color:var(--ink-soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .opt .go{align-self:center;color:var(--red);font-size:17px}
+  .footnote{margin-top:auto;padding:14px 0 18px;font-size:11px;color:var(--faint);border-top:1px solid var(--line-soft)}
+
+  /* 3 — tek kart (deste) */
+  .deck{flex:1;display:flex;flex-direction:column}
+  .dots{display:flex;gap:6px;justify-content:center;margin:6px 0 14px}
+  .dots i{width:22px;height:4px;border-radius:99px;background:var(--line)}
+  .dots i.on{background:var(--red);width:34px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px 20px;box-shadow:0 16px 40px rgba(20,19,18,.07);flex:1;display:flex;flex-direction:column}
+  .card .quote{font-size:16.5px;line-height:1.62;color:var(--ink);letter-spacing:-.01em}
+  .card .quote .mark{color:var(--red-line)}
+  .card .bottom{margin-top:auto;padding-top:16px;border-top:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between}
+  .qa{font-size:11.5px;color:var(--muted)}
+  .selftag{font-size:10px;letter-spacing:.1em;font-weight:800;color:var(--muted);text-transform:uppercase}
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0 18px}
+  .round{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-soft);font-size:16px}
+  .cta{background:var(--red);color:#fff;border:0;border-radius:14px;padding:15px 22px;font-family:inherit;font-size:14px;font-weight:700;letter-spacing:.01em}
+
+  /* 4 — detay */
+  .sheet{flex:1;overflow:hidden;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+  .topbar .back{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;background:#fff;color:var(--ink-soft)}
+  .topbar .t{font-size:13px;font-weight:650}
+  .bigquote{font-size:20px;line-height:1.55;font-weight:500;letter-spacing:-.015em}
+  .riskbar{margin:20px 0 4px;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+  .riskbar i{display:block;height:100%;width:55%;background:linear-gradient(90deg,#e8b04a,#d0342c);border-radius:99px}
+  .qbox{margin-top:20px;border-top:1px solid var(--line-soft);padding-top:14px}
+  .qbox h4{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:11px}
+  .q{font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:3px}
+  .a{font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+  .actions{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:18px 0 20px;border-top:1px solid var(--line-soft)}
+  .act{border:1px solid var(--line);background:#fff;border-radius:13px;padding:13px 10px;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:7px}
+  .act.primary{background:var(--red);border-color:var(--red);color:#fff;grid-column:span 2;font-size:13.5px;padding:15px}
+  .act.ghost{color:var(--muted);border-style:dashed}
+
+  /* tabbar */
+  .tabbar{height:58px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;font-size:10.5px;letter-spacing:.1em;font-weight:700;color:var(--faint);background:#fff}
+  .tabbar .on{color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- 1 · YÜKLENİYOR -->
+<div class="phone">
+  <span class="cap">1 · yükleniyor</span>
+  <div class="frame">
+    <div class="body">
+      <div class="brand"><span class="seal">Y</span><b>Yalan Makinası</b></div>
+      <div class="load">
+        <div class="ring"><span class="stamp">YALAN</span></div>
+        <div class="steps-load">
+          <span class="done">durum okundu</span>
+          <span class="on">bahane bulunuyor…</span>
+          <span class="off">detaylar uyduruluyor</span>
+          <span class="off">risk hesaplanıyor</span>
+        </div>
+        <div class="bar"><i></i></div>
+        <span class="hint">10-15 saniye sürebilir, kapatma</span>
+      </div>
+    </div>
+    <div class="tabbar"><span class="on">ÜRET</span><span>DEFTER</span><span>AYARLAR</span></div>
+  </div>
+</div>
+
+<!-- 2A · SEÇİM (istif) -->
+<div class="phone">
+  <span class="cap">2A · üç seçenek</span>
+  <div class="frame">
+    <div class="body">
+      <div class="brand"><span class="seal">Y</span><b>Yalan Makinası</b></div>
+      <div class="head">
+        <div>
+          <div class="kicker">3 alternatif</div>
+          <div class="h" style="margin-top:5px">Hangisi sana uyar?</div>
+        </div>
+        <div class="meta">Geç kaldım<br>Sevgili</div>
+      </div>
+
+      <div class="opt first">
+        <div class="n">01</div>
+        <div class="txt">
+          <div class="rowline"><span class="tag">Sade</span><span class="risk r-mid">orta · 42</span></div>
+          <p>evden çıktım ama otobüs gelmedi, durakta öylece bekliyorum. on dakikaya ordayım, seni beklettiğim için kendime kızıyorum.</p>
+        </div>
+        <div class="go">›</div>
+      </div>
+
+      <div class="opt">
+        <div class="n">02</div>
+        <div class="txt">
+          <div class="rowline"><span class="tag">Detaylı</span><span class="risk r-mid">orta · 55</span></div>
+          <p>kuzum geciktim biraz, kusura bakma. işten çıkışta telefonu kapatmışım, bir de otobüs gecikince üst üste geldi.</p>
+        </div>
+        <div class="go">›</div>
+      </div>
+
+      <div class="opt">
+        <div class="n">03</div>
+        <div class="txt">
+          <div class="rowline"><span class="tag">Duygusal</span><span class="risk r-low">düşük · 38</span></div>
+          <p>geciktim, affet. bugün çok yoruldum zaten, bir de yol üstünde iş çıkınca kaldım öylece. hemen geliyorum.</p>
+        </div>
+        <div class="go">›</div>
+      </div>
+
+      <div class="footnote">Karta dokun → tam ekran, sorular ve kaydet seçenekleri</div>
+    </div>
+    <div class="tabbar"><span class="on">ÜRET</span><span>DEFTER</span><span>AYARLAR</span></div>
+  </div>
+</div>
+
+<!-- 2B · SEÇİM (deste) -->
+<div class="phone">
+  <span class="cap">2B · deste (kaydırmalı)</span>
+  <div class="frame">
+    <div class="body">
+      <div class="brand"><span class="seal">Y</span><b>Yalan Makinası</b></div>
+      <div class="kicker">Geç kaldım · Sevgili</div>
+      <div class="dots" style="margin-top:14px"><i class="on"></i><i></i><i></i></div>
+
+      <div class="card">
+        <div class="rowline"><span class="selftag">Sade</span><span class="risk r-mid">orta · 42</span></div>
+        <div class="quote" style="margin-top:16px">“evden çıktım ama otobüs gelmedi, durakta öylece bekliyorum. on dakikaya ordayım, seni beklettiğim için kendime kızıyorum.”</div>
+        <div class="bottom">
+          <span class="qa">karşı taraf 2 soru sorabilir</span>
+          <span class="selftag">1/3</span>
+        </div>
+      </div>
+
+      <div class="nav">
+        <button class="round">‹</button>
+        <button class="cta">Bunu kullan</button>
+        <button class="round">›</button>
+      </div>
+    </div>
+    <div class="tabbar"><span class="on">ÜRET</span><span>DEFTER</span><span>AYARLAR</span></div>
+  </div>
+</div>
+
+<!-- 3 · TEK KART -->
+<div class="phone">
+  <span class="cap">3 · tam ekran</span>
+  <div class="frame">
+    <div class="body">
+      <div class="topbar">
+        <button class="back">‹</button>
+        <span class="t">Sade · 1/3</span>
+      </div>
+      <div class="sheet">
+        <div class="bigquote">evden çıktım ama otobüs gelmedi, durakta öylece bekliyorum. on dakikaya ordayım, seni beklettiğim için kendime kızıyorum.</div>
+
+        <div class="riskbar"><i></i></div>
+        <div class="rowline" style="justify-content:space-between">
+          <span class="qa">yakalanma riski</span>
+          <span class="risk r-mid">orta · 42/100</span>
+        </div>
+
+        <div class="qbox">
+          <h4>Karşı taraf ne sorar</h4>
+          <div class="q">hangi durakta bekliyorsun?</div>
+          <div class="a">ana cadde üstündeki duraktayım işte</div>
+          <div class="q">ne zaman çıktın evden?</div>
+          <div class="a">yirmi dakika falan oldu çıkalı</div>
+        </div>
+
+        <div class="actions">
+          <button class="act">⧉ Kopyala</button>
+          <button class="act">✆ WhatsApp</button>
+          <button class="act primary">Defter'e kaydet</button>
+          <button class="act ghost">↻ Başka üret</button>
+          <button class="act ghost">‹ Kartlara dön</button>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar"><span>ÜRET</span><span>DEFTER</span><span>AYARLAR</span></div>
+  </div>
+</div>
+
+</body>
+</html>
