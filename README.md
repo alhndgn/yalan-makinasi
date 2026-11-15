@@ -1,91 +1,143 @@
-# Yalan Makinası
+<p align="center">
+  <img src="docs/social/banner.png" alt="Yalan Makinası" width="100%">
+</p>
 
-Bir bahane değil, savunulabilir bir hikâye. Bağlama göre üç alternatif bahane üretir; her metnin
-yakalanma riskini, karşı tarafın sorabileceği soruları ve o sorulara **metinle çelişmeyen** cevapları
-gösterir. Sonuçlar Yalan Defteri'ne kaydedilir, çelişkiler uyarılır.
+<h1 align="center">Yalan Makinası</h1>
 
-- Spec: `docs/superpowers/specs/2026-11-04-yalan-makinasi-design.md`
-- Plan: `docs/superpowers/plans/2026-11-04-yalan-makinasi-v0.1.md`
+<p align="center">
+  Bağlama göre üç alternatif bahane, her biri için yakalanma riski ve karşı tarafın soracağı soruların provası.
+</p>
 
-## Çalıştırma
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-MIT-141312" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/react-19-d0342c" alt="React 19">
+  <img src="https://img.shields.io/badge/node-26-141312" alt="Node 26">
+  <img src="https://img.shields.io/badge/platform-android%20%2B%20web-d0342c" alt="Android + web">
+  <img src="https://img.shields.io/badge/test-115%20geçti-3f8a53" alt="115 test">
+  <a href="https://alhndgn.github.io/yalan-makinasi/"><img src="https://img.shields.io/badge/gizlilik-politikas%C4%B1-6e6a64" alt="Gizlilik"></a>
+</p>
+
+## Neden Yalan Makinası?
+
+- **Şablon değil, bağlam.** Kime, hangi durumda, hangi kanalda ve ne kadar "şiddetli" bir bahaneye ihtiyacın olduğunu seçersin; metinler ona göre yazılır.
+- **1-10 yalan şiddeti.** Tek cümlelik beyaz yalandan, zaman çizgisi ve tanık iması olan senaryoya kadar ölçeklenir.
+- **Risk ölçer.** Her metnin yakalanma riski 0-100 arasında puanlanır ve nedenleri yazılır.
+- **Soru provası.** Karşı tarafın soracağı en olası 3 soru ve **metinle çelişmeyen** cevapları hazırlanır.
+- **Yalan Defteri.** Ne dediğini, tutup tutmadığını kaydeder; aynı kişiye çelişkili bahaneler verirsen uyarır.
+- **İnsan gibi yazar.** Prompt, "Kesinlikle / Ayrıca / umarım" gibi makine kalıplarını yasaklar; günlük konuşma diline kalibre edilmiştir.
+
+## Ekranlar
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/01-form.png" alt="Üç adım"></td>
+    <td width="50%"><img src="docs/screenshots/02-yukleniyor.png" alt="Üretim bekleniyor"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Üç adım:</b> kime, ne oldu, şiddet</td>
+    <td align="center"><b>Üretim:</b> bahane bulunuyor…</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/03-deste.png" alt="Alternatifler"></td>
+    <td width="50%"><img src="docs/screenshots/04-detay.png" alt="Tam ekran"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Deste:</b> üç alternatif, kaydırarak gez</td>
+    <td align="center"><b>Tam ekran:</b> risk, sorular, kaydet</td>
+  </tr>
+</table>
+
+<p align="center"><img src="docs/screenshots/05-defter.png" alt="Yalan Defteri" width="48%"></p>
+
+## Özellikler
+
+| | |
+|---|---|
+| **Üretim** | 5 hedef × 7 durum, 3 strateji (sade / detaylı / duygusal), 1-10 şiddet |
+| **Analiz** | risk puanı + nedenleri, karşı tarafın soruları ve çelişmeyen cevaplar |
+| **Defter** | kayıt, `beklemede → tuttu / tutmadı` durum döngüsü, çelişki uyarısı |
+| **Paylaşım** | panoya kopyala, WhatsApp'a at, 1080×1350 paylaşım kartı indir |
+| **Motor** | AI öncelikli; yapay zekâya ulaşılamazsa cihaz içi deterministik şablon motoru |
+| **Platform** | Android (Capacitor) + web/PWA, veriler cihazda ya da kendi sunucunda |
+| **Gizlilik** | hesap yok, çerez yok, analitik yok, reklam yok — [politika](https://alhndgn.github.io/yalan-makinasi/) |
+
+## Hızlı başlangıç
 
 ```bash
 npm install
-npm run build      # arayüzü derler (src/web/dist)
-npm start          # http://127.0.0.1:8787 (API + arayüz tek süreç)
+npm run build     # arayüzü derler → src/web/dist
+npm start         # http://127.0.0.1:8787 (API + arayüz tek süreç)
 ```
 
-Geliştirme: `npm run dev:api` (8787, `node --watch`) + ayrı terminalde `npm run dev:web` (5173, proxy).
+Geliştirme: `npm run dev:api` (8787) + `npm run dev:web` (5173, proxy'li).
 
-Ortam değişkenleri için `.env.example` (PORT, DB_PATH, AI_MODE, OLLAMA_URL, OLLAMA_MODEL, OPENROUTER_KEY).
+### Yapay zekâ (isteğe bağlı)
 
-## Test
+Uygulama AI olmadan da çalışır (şablon motoru). AI istiyorsan `.env.local` oluştur:
 
 ```bash
-npm test           # 61 test: motor, API, arayüz
+VITE_AI_BASE_URL=https://opencode.ai/zen/go/v1
+VITE_AI_MODEL=deepseek-v4.1-flash
+VITE_AI_KEY=anahtarin             # APK'da gömülü kullanılır
+AI_KEY=anahtarin                  # web proxy'si için
+```
+
+> `.env.local` git'e girmez. Anahtar **asla** repoya commit edilmemelidir.
+
+### Android
+
+```bash
+bash scripts/build-apk.sh                  # VITE_LOCAL_ENGINE=1 + cap sync + gradle assembleDebug
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ## Mimari
 
-| Katman | Yer | Not |
-|---|---|---|
-| Motor | `src/engine/` | Şablon bankası (7 durum), deterministik birleştirici, risk formülü, sorgu provası, AI sağlayıcıları |
-| API | `src/server/` | Fastify + `node:sqlite` (tek dosya), hız sınırı, kötüye kullanım freni |
-| Arayüz | `src/web/` | React 19 + Vite + Tailwind 4, PWA |
-| Ortak | `src/shared/` | zod şemaları ve sabitler |
+```
+src/
+  engine/          saf TypeScript motor (tarayıcıda da çalışır)
+    templates/tr/  7 durum bankası, detay nesnesi {tag,text,q,a}
+    compose.ts     deterministik PRNG ile birleştirme
+    risk.ts        0-100 risk formülü (eşik 35/65)
+    queries.ts     metindeki detaylardan soru üretimi
+    prompt.ts      şiddet bantlı AI sistem promptu
+    providers/     template | openaiCompat
+  server/          Fastify 5 + node:sqlite, /api rotaları, AI proxy
+  web/             React 19 + Vite, üç adımlı akış, deste, defter
+  shared/          zod şemaları (iki taraf ortak)
+android/           Capacitor projesi (com.teqstudio.yalan)
+```
 
-Üretim varsayılan olarak **şablon motorunda** çalışır (ağ yok, <50 ms). `AI_MODE=ollama|openrouter`
-seçilirse önce model denenir; model hata verirse sessizce şablona dönülür.
+**İki veri modu:** `server` (SQLite + `/api`) ve `local` (`VITE_LOCAL_ENGINE=1` → cihaz içi motor + `localStorage`). İkisi ayrı veri tutar; senkron yoktur.
 
-## Telefon (APK)
-
-İki mod var; aynı arayüz, aynı motor:
-
-| Mod | Veri | Kullanım |
-|---|---|---|
-| `server` (varsayılan) | Fastify + SQLite, tarayıcıdan | `npm run build && npm start` |
-| `local` (`VITE_LOCAL_ENGINE=1`) | Tarayıcı içi motor + `localStorage` | APK / çevrimdışı |
+## Test
 
 ```bash
-bash scripts/build-apk.sh      # web (local mod) + cap sync + gradle assembleDebug
-# çıktı: android/app/build/outputs/apk/debug/app-debug.apk
+npm test          # 115 test: motor, API, AI istemcisi, arayüz akışı
 ```
 
-- APK internet gerektirmez; kayıtlar cihazda (`localStorage`, `ym_lies_v1`).
-- Bu bir **debug** APK'dır: telefona elle kurulur (bilinmeyen kaynak izni). Play Store için imzalı
-  release build + keystore gerekir (`android/keystore.properties` + `bundleRelease`).
-- Android projesini güncelledikten sonra: `npx cap sync android`.
+## Ortam değişkenleri
 
-## Açılış ekranı (Teq Studio ortak iskelet)
+| Değişken | Varsayılan | Açıklama |
+|---|---|---|
+| `PORT` | `8787` | Sunucu portu |
+| `DB_PATH` | `data/yalan.db` | SQLite dosyası |
+| `AI_MODE` | `off` | Sunucu tarafı motor: `off` / `ollama` / `openrouter` |
+| `AI_BASE_URL`, `AI_KEY`, `AI_MODEL` | — | Web için AI proxy'si |
+| `VITE_AI_BASE_URL`, `VITE_AI_KEY`, `VITE_AI_MODEL` | — | Derleme zamanında gömülen istemci AI ayarı |
+| `RATE_LIMIT_PER_MIN` | `20` | Üretim isteği sınırı |
 
-`src/web/src/components/TeqSplash.tsx` — her uygulama kendi adı, vaadi, logosu ve vurgu rengiyle kullanır;
-“Developed by Teq Studio” imzası köşede sabittir. Logo ayrı bileşen (`YalanMark.tsx`).
+## Yol haritası
 
-```tsx
-<TeqSplash appName="Yalan Makinası" tagline="…" accent="#A83A30" mark={<YalanMark />} onDone={…} />
-```
+- [x] Üretici + risk + soru provası
+- [x] Yalan Defteri + çelişki uyarısı
+- [x] Paylaşım kartı, splash, üç adımlı akış
+- [x] AI beyni (deepseek-v4.1-flash), deste + tam ekran akışı
+- [ ] Topluluk akışı (oy, yorum)
+- [ ] Play Store yayını
 
-- Soğuk açılışta ~1,2 sn, ardından 400 ms kararma; `sessionStorage` ile oturum başına bir kez.
-- `prefers-reduced-motion` açıksa animasyonsuz, 260 ms.
-- Tasarım incelemesi: `?splash=hold` ekranı ekranda tutar.
-- Android tarafında `AppTheme.NoActionBarLaunch` zemini `@color/splashPaper` (#ECE5D7) — beyaz flaş yok.
+## Lisans
 
-## AI sunucusu (Everything VM)
+MIT — bkz. [LICENSE](LICENSE). Uygulama eğlence amaçlıdır; resmî belge, sağlık raporu veya hukuki içerik üretmez.
 
-Uygulama **AI öncelikli** çalışır: Ayarlar → AI sunucusu doldurulmuşsa önce AI denenir, ulaşılamazsa
-sessizce şablon motoruna düşer (kullanıcı hata görmez).
-
-Kurulum (VM'de root): `bash deploy/everything-ai-setup.sh`
-- Ollama `0.0.0.0:11434`'e dinler, `OLLAMA_ORIGINS=*`
-- nginx `http://192.168.1.12/ai/` → Ollama (CORS + uzun timeout)
-- Model: `qwen2.5:14b-instruct-q4_K_M` (3090'da ~9 GB VRAM; ComfyUI açıkken sığmaz)
-- ufw varsa yalnız LAN'a (`192.168.1.0/24`) 80 ve 11434 açılır
-
-Uygulamada: **Ayarlar → AI sunucusu** → adres `http://192.168.1.12/ai/v1`, model adı, (varsa) anahtar →
-**Bağlantıyı test et**. Android tarafında bu IP için cleartext HTTP izni `network_security_config.xml`'de.
-
-## Durum
-
-- v0.1 tamam: üretici, şiddet kaydırıcısı, risk + sorgu provası, Yalan Defteri + çelişki uyarısı,
-  paylaşım kartı (1080×1350), ayarlar/KVKK, PWA.
-- v0.2 (Faz 4): topluluk akışı, oylama, yorum, moderasyon — henüz yok.
+<p align="center"><sub>Developed by <b>Teq Studio</b> · teqstudio@hotmail.com</sub></p>

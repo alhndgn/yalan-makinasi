@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yalan Makinası — Gizlilik Politikası</title>
+<meta name="description" content="Yalan Makinası gizlilik politikası: hangi veriler işlenir, nerede saklanır, kimseyle paylaşılır mı.">
+<style>
+  :root{
+    --red:#d0342c; --ink:#141312; --muted:#6e6a64; --faint:#a9a29a;
+    --line:#efeae3; --paper:#fbf9f6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+       -webkit-font-smoothing:antialiased;line-height:1.65}
+  .wrap{max-width:720px;margin:0 auto;padding:56px 22px 96px}
+  header{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+  .seal{width:30px;height:30px;border-radius:50%;background:var(--red);color:#fff;
+        display:grid;place-items:center;font-weight:800;font-size:13px}
+  header b{font-size:13px;letter-spacing:.02em;color:var(--muted);font-weight:600}
+  h1{font-size:32px;line-height:1.2;letter-spacing:-.02em;margin:0 0 8px}
+  .lead{color:var(--muted);font-size:15px;margin:0 0 6px}
+  .date{font-size:12px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase;margin-bottom:34px;display:block}
+  h2{font-size:17px;letter-spacing:-.01em;margin:34px 0 8px}
+  p,li{font-size:14.5px;color:#2a2825}
+  ul{padding-left:20px;margin:8px 0}
+  li{margin-bottom:6px}
+  .box{border:1px solid var(--line);background:#fff;border-radius:14px;padding:16px 18px;margin:22px 0}
+  .box b{color:var(--red)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:#f4f0ea;padding:1px 5px;border-radius:5px}
+  footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint)}
+  a{color:var(--red);text-decoration:none;border-bottom:1px solid rgba(208,52,44,.28)}
+  a:hover{border-bottom-color:var(--red)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header><span class="seal">Y</span><b>Yalan Makinası · Teq Studio</b></header>
+
+  <h1>Gizlilik Politikası</h1>
+  <p class="lead">Bu politika, Yalan Makinası uygulamasında (Android ve web) hangi verilerin işlendiğini,
+    nerede saklandığını ve kimseyle paylaşılmadığını açıklar.</p>
+  <span class="date">Son güncelleme: 15 Kasım 2026</span>
+
+  <div class="box">
+    <b>Kısa özet:</b> Hesap açman gerekmez. Yazdığın metinler ve kayıtların yalnızca kendi cihazında ya da
+    uygulamanın kendi veritabanında tutulur. Hiçbir veri reklam, pazarlama veya profil çıkarma amacıyla
+    kullanılmaz, üçüncü taraflara satılmaz, kiralanmaz veya devredilmez.
+  </div>
+
+  <h2>1. Veri sorumlusu</h2>
+  <p>Yalan Makinası, Teq Studio tarafından geliştirilmiştir. İletişim:
+    <a href="mailto:teqstudio@hotmail.com">teqstudio@hotmail.com</a></p>
+
+  <h2>2. Hangi veriler işlenir</h2>
+  <table>
+    <tr><th>Veri</th><th>Amaç</th><th>Nerede</th></tr>
+    <tr>
+      <td>Seçimlerin (kime, ne oldu, ton, kanal, 1-10 şiddet) ve üretilen bahane metinleri</td>
+      <td>Bahane üretmek, risk göstergesini ve soru provasını hazırlamak</td>
+      <td>Sunucu modunda uygulama veritabanı; APK'da yalnızca cihaz içi depolama</td>
+    </tr>
+    <tr>
+      <td>Rastgele cihaz kimliği (<code>UUID</code>)</td>
+      <td>Kayıtların hangi cihaza ait olduğunu ayırmak — hesap/şifre yok</td>
+      <td>Uygulama veritabanı (cihazın kendisinde üretilir, reklam kimliği değildir)</td>
+    </tr>
+    <tr>
+      <td>Metnin "tuttu / tutmadı" durumu</td>
+      <td>Yalan Defteri ve çelişki uyarısı</td>
+      <td>Uygulama veritabanı</td>
+    </tr>
+  </table>
+  <p>Uygulama <b>ad, soyad, e-posta, telefon numarası, konum, kişi listesi, fotoğraf veya rehber</b> verisi
+    istemez ve toplamaz.</p>
+
+  <h2>3. Veriler nerede saklanır</h2>
+  <ul>
+    <li><b>Android uygulaması (APK):</b> Veriler yalnızca cihazın kendi depolama alanında tutulur.
+      Uygulamayı kaldırdığında veya uygulama verilerini temizlediğinde silinir.</li>
+    <li><b>Web sürümü:</b> Seçimler ve kayıtlar uygulamanın kendi sunucusundaki veritabanında (SQLite)
+      saklanır. Sunucu yalnızca bu uygulama için çalışır; başka bir amaçla kullanılmaz.</li>
+  </ul>
+
+  <h2>4. Yapay zekâ ile üretim</h2>
+  <p>Metinler bir dil modeliyle üretilir. Üretim sırasında <b>yalnızca</b> seçtiğin bağlam (kime, ne oldu,
+    ton, kanal, şiddet düzeyi) ve varsa kendi yazdığın durum açıklaması model servisine iletilir.
+    Bu istekte adın, e-postan, cihaz kimliğin veya konumun <b>gönderilmez</b>. Servis sağlayıcı bu veriyi
+    yalnızca yanıtı oluşturmak için işler; uygulama tarafında bu istekler için ayrıca kayıt tutulmaz.
+    Yapay zekâ erişilemezse uygulama cihaz içi şablon motoruna düşer ve hiçbir veri dışarı çıkmaz.</p>
+
+  <h2>5. Paylaşım</h2>
+  <p>Verilerin <b>hiçbir şirketle, kurumla veya kişiyle paylaşılmaz</b>; reklam ağına, veri simsarına veya
+    analitik servisine aktarılmaz, satılmaz. Yalnızca şu durumlar söz konusu olabilir:</p>
+  <ul>
+    <li>Senin açıkça başlattığın işlemler: "Kopyala" veya "WhatsApp" ile metni kendin paylaştığında, içerik
+      seçtiğin uygulamaya gider.</li>
+    <li>Kanunen zorunlu hâller: geçerli bir mahkeme kararı veya yasal yükümlülük.</li>
+  </ul>
+
+  <h2>6. Saklama süresi ve silme</h2>
+  <p>Kayıtlar, sen silene kadar saklanır. Yalan Defteri'ndeki her kaydı tek tek silebilirsin; APK'da
+    uygulama verilerini temizlemek tüm kayıtları kaldırır. Talebin üzerine sunucudaki kayıtlar da
+    <a href="mailto:teqstudio@hotmail.com">teqstudio@hotmail.com</a> adresine yazdığında silinir.</p>
+
+  <h2>7. İzinler</h2>
+  <p>Uygulama yalnızca internet erişimi ister. Kamera, mikrofon, konum, rehber veya depolama izni istemez.
+    "Kart indir" özelliği bir görsel oluşturup cihazın indirme klasörüne kaydeder; bu işlem cihaz içinde kalır.</p>
+
+  <h2>8. Reklamlar</h2>
+  <p><b>Bu sürümde reklam yoktur</b> ve reklam kimliği (Advertising ID) toplanmaz. İleride reklam
+    eklenirse yalnızca Google AdMob kullanılacak; reklam kimliği ve cihaz bilgisi reklam sunumu için
+    Google ile paylaşılacak, bu politika ve mağaza veri güvenliği beyanı önceden güncellenecektir.
+    Reklamsız deneyim isteyen kullanıcılar için güncelleme öncesi bilgilendirme yapılır.</p>
+
+  <h2>9. Çocuklar</h2>
+  <p>Uygulama 13 yaş altı çocuklara yönelik değildir ve bilerek çocuklardan veri toplamaz.</p>
+
+  <h2>10. Kullanım amacı ve sınır</h2>
+  <p>Uygulama eğlence amaçlıdır. Resmî belge, sağlık raporu, imza, fatura veya mahkeme/polis içeriği
+    üretmez; üretim motoru bu tür talepleri reddeder.</p>
+
+  <h2>11. Hakların (KVKK / GDPR)</h2>
+  <p>Verilerine erişme, düzeltme, silinmesini isteme ve işlemeye itiraz etme hakkın vardır. Talepler için
+    <a href="mailto:teqstudio@hotmail.com">teqstudio@hotmail.com</a> adresine yazabilirsin; en geç 30 gün
+    içinde yanıt verilir.</p>
+
+  <h2>12. Değişiklikler</h2>
+  <p>Politika güncellenirse bu sayfada yayımlanır ve "son güncelleme" tarihi değişir. Önemli
+    değişikliklerde uygulama içinde bilgilendirme yapılır.</p>
+
+  <footer>
+    Yalan Makinası · Teq Studio · <a href="mailto:teqstudio@hotmail.com">teqstudio@hotmail.com</a><br>
+    Bu sayfa GitHub Pages üzerinde yayımlanır.
+  </footer>
+</div>
+</body>
+</html>

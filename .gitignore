@@ -1,4 +1,6 @@
 
+*.jks
+*.keystore
 .DS_Store
 .env
 .env.*.local
@@ -9,7 +11,9 @@ android/app/build/
 android/app/src/main/assets/capacitor.config.json
 android/app/src/main/assets/public/
 android/build/
+android/key.properties
 android/local.properties
+android/upload-keystore.jks
 data/*.db
 data/*.db-shm
 data/*.db-wal
