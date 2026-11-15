@@ -3,10 +3,11 @@ import { buildSystemPrompt } from '../../../engine/prompt.ts';
 import { variantSchema, type GenerateRequest, type Variant } from '../../../shared/schema.ts';
 import { getDeviceId } from './deviceId.ts';
 import type { AiConfig } from './aiConfig.ts';
-import { endpointFor, isNativeApp, postJson } from './aiTransport.ts';
+import { endpointFor, isNativeApp, postJson, sessionId } from './aiTransport.ts';
 
 const responseSchema = z.object({ variants: z.array(variantSchema).length(3) });
 
+/** Model bazen JSON'u ```json ... ``` içine sarar; temizle. */
 function stripFences(text: string): string {
   const trimmed = text.trim();
   const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
@@ -15,19 +16,22 @@ function stripFences(text: string): string {
 
 function extractContent(body: unknown): string | null {
   const data = body as { choices?: { message?: { content?: string } }[] } | null;
-  return data?.choices?.[0]?.message?.content ?? null;
+  return data?.choices?.[0]?.message?.content || null;
 }
 
 async function ask(cfg: AiConfig, payload: Record<string, unknown>, timeoutMs: number) {
   const native = isNativeApp();
   const url = endpointFor(cfg.baseUrl, native);
   const headers: Record<string, string> = { 'content-type': 'application/json' };
+
   if (native) {
     if (cfg.apiKey) headers.authorization = `Bearer ${cfg.apiKey}`;
   } else {
     // Web: kendi proxy'miz; anahtar sunucuda. Cihaz kimliği zorunlu.
     headers['x-device-id'] = getDeviceId();
+    headers['x-opencode-session'] = sessionId();
   }
+
   return postJson(url, payload, headers, timeoutMs, native);
 }
 
@@ -35,13 +39,16 @@ async function ask(cfg: AiConfig, payload: Record<string, unknown>, timeoutMs: n
  * AI'dan üç varyant ister.
  * - Native (APK): doğrudan sağlayıcı, CORS yok.
  * - Web: /api/ai/chat proxy'si, anahtar sunucuda kalır.
+ * Reasoning'i kapatıyoruz (deepseek-v4.1-flash düşünme token'ı yakarsa yanıt 2 katı sürüyor).
  * Önce JSON modunda dener, sunucu desteklemiyorsa formatsız tekrar dener; olmazsa hata fırlatır (çağıran şablona düşer).
  */
-export async function generateWithAi(req: GenerateRequest, cfg: AiConfig, timeoutMs = 30000): Promise<Variant[]> {
+export async function generateWithAi(req: GenerateRequest, cfg: AiConfig, timeoutMs = 60000): Promise<Variant[]> {
   const base = {
     model: cfg.model,
-    temperature: 0.9,
-    max_tokens: 1200,
+    temperature: 0.95,
+    max_tokens: 2600,
+    thinking: { type: 'disabled' },
+    reasoning_effort: 'minimal',
     messages: [
       { role: 'system', content: buildSystemPrompt(req.intensity) },
       {

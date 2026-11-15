@@ -1,6 +1,8 @@
 import type { GenerateRequest, SavedLie, Variant } from '../../../shared/schema.ts';
 import type { Status, TargetId } from '../../../shared/constants.ts';
 import { getDeviceId } from './deviceId.ts';
+import { aiReady, readAiConfig } from './aiConfig.ts';
+import { generateWithAi } from './aiProvider.ts';
 
 export class ApiError extends Error {
   code: string;
@@ -30,6 +32,16 @@ export type RiskPreview = { score: number; level: 'dusuk' | 'orta' | 'yuksek'; r
 
 export const api = {
   async generate(body: GenerateRequest & { salt?: string }): Promise<{ variants: Variant[]; provider: string }> {
+    // AI beyin her iki modda da aynı: önce AI, olmazsa sunucu/şablon.
+    const ai = readAiConfig();
+    if (aiReady(ai)) {
+      try {
+        return { variants: await generateWithAi(body, ai), provider: 'ai' };
+      } catch {
+        /* sessizce şablona düş */
+      }
+    }
+
     const { salt, ...payload } = body;
     const query = salt ? `?salt=${encodeURIComponent(salt)}` : '';
     return call<{ variants: Variant[]; provider: string }>(`/api/generate${query}`, {
