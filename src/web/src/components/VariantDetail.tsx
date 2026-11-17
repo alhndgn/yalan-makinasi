@@ -1,33 +1,47 @@
 import { useState } from 'react';
 import type { Variant } from '../../../shared/schema.ts';
-import { downloadShareCard } from '../lib/shareCard.ts';
-import { Typewriter } from './Typewriter.tsx';
 
 type Props = {
   variant: Variant;
   index: number;
   total: number;
-  targetLabel: string;
+  personLabel: string;
   onSave: () => void;
   onRegenerate: () => void;
   onBack: () => void;
+  note?: string | null;
 };
 
 const RISK_LABEL: Record<Variant['riskLevel'], string> = { dusuk: 'düşük', orta: 'orta', yuksek: 'yüksek' };
 const STRATEGY_LABEL: Record<Variant['strategy'], string> = { sade: 'Sade', detayli: 'Detaylı', duygusal: 'Duygusal' };
 
-/** Seçilen alternatifin tam ekran hâli: metin, risk, sorular ve eylemler. */
-export function VariantDetail({ variant, index, total, targetLabel, onSave, onRegenerate, onBack }: Props) {
-  const [copied, setCopied] = useState(false);
+/** Instagram gibi metin kabul etmeyen uygulamalar için: paylaşım sayfası, yoksa kopyala + uygulamayı aç. */
+async function shareElsewhere(text: string): Promise<'paylasildi' | 'kopyalandi'> {
+  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ text });
+      return 'paylasildi';
+    } catch {
+      /* kullanıcı vazgeçti ya da desteklenmiyor */
+    }
+  }
+  await navigator.clipboard.writeText(text).catch(() => null);
+  window.open('https://www.instagram.com/', '_blank', 'noopener');
+  return 'kopyalandi';
+}
+
+/** Seçilen yalanın tam ekran hâli: WhatsApp konuşması gibi soru-cevap + yuvarlak eylemler. */
+export function VariantDetail({ variant, index, total, personLabel, onSave, onRegenerate, onBack, note }: Props) {
+  const [copied, setCopied] = useState<string | null>(null);
   const waHref = `https://wa.me/?text=${encodeURIComponent(variant.text)}`;
 
-  async function copy() {
+  async function copyText(text: string) {
     try {
-      await navigator.clipboard.writeText(variant.text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
+      await navigator.clipboard.writeText(text);
+      setCopied('Kopyalandı');
+      setTimeout(() => setCopied(null), 1600);
     } catch {
-      setCopied(false);
+      setCopied('Kopyalanamadı');
     }
   }
 
@@ -37,69 +51,97 @@ export function VariantDetail({ variant, index, total, targetLabel, onSave, onRe
         <button type="button" className="round" onClick={onBack} aria-label="Kartlara dön">
           ‹
         </button>
-        <span className="detail-title">
+        <span className="detail-title">{personLabel || 'Karşı taraf'}</span>
+        <span className="spacer" />
+        <span className="small faint">
           {STRATEGY_LABEL[variant.strategy]} · {index + 1}/{total}
         </span>
-        <span className="spacer" />
       </header>
 
-      <p className="detail-text" data-testid="detail-text">
-        <Typewriter text={variant.text} />
-      </p>
-
-      <div className="detail-risk">
-        <div className="risk-track" aria-hidden="true">
-          <i style={{ width: `${Math.min(100, Math.max(4, variant.riskScore))}%` }} />
-        </div>
-        <div className="detail-risk-row">
-          <span className="small muted">yakalanma riski</span>
+      <div className="picked">
+        <div className="picked-head">
+          <span className="kicker">seçtiğin yalan</span>
           <span className={`risk risk-${variant.riskLevel}`}>
-            {RISK_LABEL[variant.riskLevel]} · {variant.riskScore}/100
+            risk {RISK_LABEL[variant.riskLevel]} · {variant.riskScore}
           </span>
         </div>
-        {variant.riskReasons.length > 0 && (
-          <ul className="reasons">
-            {variant.riskReasons.slice(0, 3).map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        )}
+        <p className="picked-text" data-testid="detail-text">
+          {variant.text}
+        </p>
       </div>
 
-      {variant.queries.length > 0 && (
-        <div className="detail-queries">
-          <h4>Karşı taraf ne sorar</h4>
-          {variant.queries.map((q, i) => (
-            <div key={`${q.q}-${i}`} className="qa-block">
-              <p className="q">{q.q}</p>
-              <p className="a">{q.a}</p>
+      <div className="chat" data-testid="chat">
+        <p className="chat-caption">Karşı taraf ne sorar — cevaplar hazır</p>
+        {variant.queries.length === 0 && <p className="small muted">Bu metin için soru provası yok.</p>}
+        {variant.queries.map((qa, i) => (
+          <div key={`${qa.q}-${i}`} className="bubble-row">
+            <div className="bubble in">
+              <span className="bubble-who">karşı taraf</span>
+              {qa.q}
             </div>
-          ))}
-        </div>
+            <div className="bubble out">
+              <span className="bubble-who">sen</span>
+              {qa.a}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {copied && (
+        <p className="toast" role="status">
+          {copied}
+        </p>
+      )}
+      {note && (
+        <p className="toast" role="status">
+          {note}
+        </p>
       )}
 
-      <div className="detail-actions">
-        <button type="button" className="act" onClick={copy}>
-          ⧉ {copied ? 'Kopyalandı' : 'Kopyala'}
-        </button>
-        <a className="act" href={waHref} target="_blank" rel="noreferrer">
-          ✆ WhatsApp
+      <div className="dock" data-testid="dock">
+        <a className="dock-btn wa" href={waHref} target="_blank" rel="noreferrer" aria-label="WhatsApp'ta paylaş">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.2-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 .9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.1.2-.3.3-.1.6.2.3.7 1.2 1.5 1.9 1 .9 1.7 1.1 2 1.2.2.1.4.1.6-.1l.7-.9c.2-.2.4-.2.6-.1l2 .9c.2.1.4.1.4.3 0 .1 0 .9-.1 1.1Z" />
+          </svg>
         </a>
-        <button type="button" className="act primary" onClick={onSave}>
-          Defter&apos;e kaydet
-        </button>
+
         <button
           type="button"
-          className="act ghost"
-          onClick={() => void downloadShareCard({ text: variant.text, riskLevel: variant.riskLevel, targetLabel })}
+          className="dock-btn ig"
+          aria-label="Diğer uygulamalarda paylaş"
+          onClick={() => void shareElsewhere(variant.text)}
         >
-          Kart indir
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" strokeWidth="1.9" />
+            <circle cx="12" cy="12" r="4" fill="none" strokeWidth="1.9" />
+            <circle cx="17.2" cy="6.8" r="1.15" />
+          </svg>
         </button>
-        <button type="button" className="act ghost" onClick={onRegenerate}>
-          ↻ Başka üret
+
+        <button type="button" className="dock-btn save" onClick={onSave} aria-label="Deftere kaydet" data-testid="dock-save">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 3.5h9.2L19.5 8v12.5H6z" fill="none" strokeWidth="1.9" />
+            <path d="M9 3.5v5h6v-5" fill="none" strokeWidth="1.6" />
+          </svg>
         </button>
-        <button type="button" className="act ghost" onClick={onBack}>
-          ‹ Kartlara dön
+
+        <button type="button" className="dock-btn refresh" onClick={onRegenerate} aria-label="Yenile">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 12a8 8 0 1 1-2.8-6.1" fill="none" strokeWidth="1.9" />
+            <path d="M20 4.5V10h-5.2" fill="none" strokeWidth="1.9" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          className="dock-btn copy"
+          aria-label="Metni kopyala"
+          onClick={() => void copyText(variant.text)}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="8.5" y="8.5" width="11" height="11" rx="2.5" fill="none" strokeWidth="1.8" />
+            <path d="M15.5 6.5v-1a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h1" fill="none" strokeWidth="1.6" />
+          </svg>
         </button>
       </div>
     </section>

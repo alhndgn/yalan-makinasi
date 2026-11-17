@@ -1,51 +1,46 @@
 import { useEffect, useState } from 'react';
-import type { PersonSummary } from '../../../shared/schema.ts';
-import { CHANNELS, DEFAULT_FORM, SITUATIONS, STYLES, TARGETS } from '../../../shared/constants.ts';
-import type { GenerateRequest, Variant } from '../../../shared/schema.ts';
+import { CHANNELS, DEFAULT_FORM, STYLES } from '../../../shared/constants.ts';
+import type { GenerateRequest, PersonSummary, Variant } from '../../../shared/schema.ts';
 import { GeneratingScreen } from '../components/GeneratingScreen.tsx';
-import { IntensitySlider } from '../components/IntensitySlider.tsx';
-import { StepCard } from '../components/StepCard.tsx';
+import { IntensityGauge } from '../components/IntensityGauge.tsx';
 import { VariantDeck } from '../components/VariantDeck.tsx';
 import { VariantDetail } from '../components/VariantDetail.tsx';
 import { YalanMark } from '../components/YalanMark.tsx';
-import { ApiError, type RiskPreview } from '../lib/api.ts';
+import { ApiError } from '../lib/api.ts';
 import { data } from '../lib/data.ts';
 import { readDefaults } from '../lib/defaults.ts';
-import { intensityBand } from '../lib/intensity.ts';
 import { repeatWarning } from '../lib/personView.ts';
 
 type Props = { onGenerated: (variants: Variant[]) => void };
 type View = 'form' | 'loading' | 'deck' | 'detail';
 
-const RISK_LABEL: Record<RiskPreview['level'], string> = { dusuk: 'düşük', orta: 'orta', yuksek: 'yüksek' };
+/** Kimin için kutusunun altındaki dört hızlı seçenek. */
+const QUICK_TARGETS = [
+  { id: 'anne', label: 'Anne-baba' },
+  { id: 'arkadas', label: 'Arkadaş' },
+  { id: 'patron', label: 'Patron' },
+  { id: 'sevgili', label: 'Sevgili' },
+] as const;
 
 export function Generator({ onGenerated }: Props) {
-  const [form, setForm] = useState<GenerateRequest>(() => {
-    const defaults = readDefaults();
-    return { ...DEFAULT_FORM, person: '', style: defaults.style, intensity: defaults.intensity };
-  });
+  const defaults = readDefaults();
+  const [person, setPerson] = useState('');
+  const [target, setTarget] = useState<GenerateRequest['target']>(DEFAULT_FORM.target);
+  const [situationText, setSituationText] = useState('');
+  const [intensity, setIntensity] = useState(defaults.intensity ?? DEFAULT_FORM.intensity);
+  const [channel, setChannel] = useState<GenerateRequest['channel']>(DEFAULT_FORM.channel);
+  const [style, setStyle] = useState<GenerateRequest['style']>(defaults.style ?? DEFAULT_FORM.style);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const [people, setPeople] = useState<PersonSummary[]>([]);
   const [repeat, setRepeat] = useState<string | null>(null);
-  const [usedForm, setUsedForm] = useState<GenerateRequest | null>(null);
-  const [openStep, setOpenStep] = useState<1 | 2 | 3>(1);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [index, setIndex] = useState(0);
+  const [usedPerson, setUsedPerson] = useState('');
   const [view, setView] = useState<View>('form');
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<RiskPreview | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
   const [provider, setProvider] = useState<string>('template');
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      data
-        .previewRisk({ target: form.target, situation: form.situation, channel: form.channel, intensity: form.intensity })
-        .then(setPreview)
-        .catch(() => setPreview(null));
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [form.target, form.situation, form.channel, form.intensity]);
 
   useEffect(() => {
     data
@@ -54,36 +49,40 @@ export function Generator({ onGenerated }: Props) {
       .catch(() => setPeople([]));
   }, []);
 
-  // Aynı kişiye aynı bahaneyi tekrar mı veriyorsun?
+  // Aynı kişiye daha önce ne söyledin?
   useEffect(() => {
-    const person = (form.person ?? '').trim();
-    if (!person) {
+    const name = person.trim();
+    if (!name) {
       setRepeat(null);
       return;
     }
     data
-      .byPerson(person)
-      .then((r) =>
-        setRepeat(repeatWarning((r.items ?? []).map((i) => ({ situation: i.situation, createdAt: i.createdAt })), form.situation)),
-      )
+      .byPerson(name)
+      .then((r) => {
+        const history = (r.items ?? []).map((i) => ({ situation: i.situation, createdAt: i.createdAt }));
+        setRepeat(repeatWarning(history, 'ozel'));
+      })
       .catch(() => setRepeat(null));
-  }, [form.person, form.situation]);
-
-  function pick<T extends Partial<GenerateRequest>>(patch: T, nextStep: 1 | 2 | 3) {
-    setForm((prev) => ({ ...prev, ...patch }));
-    setOpenStep(nextStep);
-  }
+  }, [person]);
 
   async function generate() {
     setError(null);
     setSavedNote(null);
     setView('loading');
+    const request: GenerateRequest = {
+      person: person.trim(),
+      target,
+      situation: 'ozel',
+      situationCustom: situationText.trim().slice(0, 180),
+      channel,
+      style,
+      intensity,
+    };
     try {
-      const request = { ...form };
       const result = await data.generate({ ...request, salt: String(Date.now()) });
       setVariants(result.variants);
       setIndex(0);
-      setUsedForm(request);
+      setUsedPerson(person.trim());
       setProvider(result.provider ?? 'template');
       setView('deck');
       onGenerated(result.variants);
@@ -96,14 +95,29 @@ export function Generator({ onGenerated }: Props) {
             ? 'Bu tür bir metin üretemem (belge, rapor, resmî kayıt).'
             : 'Bir şeyler ters gitti, tekrar dene.',
       );
-      setVariants([]);
       setView('form');
     }
   }
 
+  function editVariant(next: string) {
+    setVariants((prev) => prev.map((item, i) => (i === index ? { ...item, text: next } : item)));
+  }
+
   async function saveVariant(variant: Variant) {
     try {
-      await data.saveLie({ variant, form: usedForm ?? form, provider });
+      await data.saveLie({
+        variant,
+        form: {
+          person: usedPerson,
+          target,
+          situation: 'ozel',
+          situationCustom: situationText.trim().slice(0, 180),
+          channel,
+          style,
+          intensity,
+        },
+        provider,
+      });
       setSavedNote("Defter'e kaydedildi.");
       setTimeout(() => setSavedNote(null), 2200);
     } catch {
@@ -111,227 +125,137 @@ export function Generator({ onGenerated }: Props) {
     }
   }
 
-  const targetLabel = TARGETS.find((t) => t.id === form.target)?.label ?? '';
-  const situationLabel = SITUATIONS.find((s) => s.id === form.situation)?.label ?? '';
-  const band = intensityBand(form.intensity);
-  const resultForm = usedForm ?? form;
-  const resultTarget = TARGETS.find((t) => t.id === resultForm.target)?.label ?? '';
-  const resultSituation = SITUATIONS.find((s) => s.id === resultForm.situation)?.label ?? '';
+  const ready = situationText.trim().length >= 3;
 
-  let screen: React.ReactNode;
+  if (view === 'loading') return <GeneratingScreen />;
 
-  if (view === 'loading') {
-    screen = <GeneratingScreen />;
-  } else if (view === 'deck' && variants.length > 0) {
-    screen = (
+  if (view === 'deck' && variants.length > 0) {
+    return (
       <VariantDeck
         variants={variants}
         index={index}
-        contextLabel={`${resultSituation} · ${resultTarget}`}
+        contextLabel={usedPerson || 'karşı taraf'}
         onIndex={setIndex}
+        onEdit={editVariant}
         onUse={() => setView('detail')}
         onBack={() => setView('form')}
       />
     );
-  } else if (view === 'detail' && variants[index]) {
-    screen = (
+  }
+
+  if (view === 'detail' && variants[index]) {
+    return (
       <VariantDetail
         variant={variants[index]!}
         index={index}
         total={variants.length}
-        targetLabel={resultTarget}
+        personLabel={usedPerson}
         onSave={() => void saveVariant(variants[index]!)}
         onRegenerate={() => void generate()}
         onBack={() => setView('deck')}
+        note={savedNote}
       />
-    );
-  } else {
-    screen = renderForm();
-  }
-
-  function renderForm() {
-    return (
-      <>
-        <header className="brandbar">
-          <div className="brand">
-            <YalanMark size={22} color="#D0342C" needle="#141312" />
-            <span>Yalan Makinası</span>
-          </div>
-          <span />
-        </header>
-
-        <h1 className="h1">Üç adım</h1>
-        <p className="muted">Sırayla seç, gerisi kendiliğinden.</p>
-
-        <div className="person-box">
-          <label className="field-label" htmlFor="person-input">
-            Kimin için?
-          </label>
-          <input
-            id="person-input"
-            className="input person-input"
-            list="ym-people"
-            placeholder="İsim yaz (ör. Ayşe, patron Mehmet)"
-            maxLength={40}
-            value={form.person ?? ''}
-            onChange={(e) => setForm((prev) => ({ ...prev, person: e.target.value }))}
-          />
-          <datalist id="ym-people">
-            {people.map((p) => (
-              <option key={p.person} value={p.person} />
-            ))}
-          </datalist>
-          <p className="small faint person-hint">
-            {form.person?.trim()
-              ? 'Bu kişiye daha önce söylediklerini hatırlıyoruz.'
-              : 'İsim yazarsan geçmişi hatırlar, aynı bahaneyi tekrar etmez.'}
-          </p>
-        </div>
-
-        <div style={{ marginTop: 12 }}>
-          <StepCard
-            step={1}
-            title="Kime?"
-            summary={form.person ? `${form.person} · ${targetLabel}` : targetLabel}
-            open={openStep === 1}
-            onOpen={() => setOpenStep(1)}
-          >
-            <div className="chips">
-              {TARGETS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className={`chip ${form.target === t.id ? 'is-active' : ''}`}
-                  aria-pressed={form.target === t.id}
-                  onClick={() => pick({ target: t.id }, 2)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </StepCard>
-
-          <StepCard step={2} title="Ne oldu?" summary={situationLabel} open={openStep === 2} onOpen={() => setOpenStep(2)}>
-            <div className="chips">
-              {SITUATIONS.filter((s) => s.id !== 'ozel').map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`chip ${form.situation === s.id ? 'is-active' : ''}`}
-                  aria-pressed={form.situation === s.id}
-                  onClick={() => pick({ situation: s.id }, 3)}
-                >
-                  {s.label}
-                </button>
-              ))}
-              <button
-                type="button"
-                className={`chip ${form.situation === 'ozel' ? 'is-active' : ''}`}
-                aria-pressed={form.situation === 'ozel'}
-                onClick={() => setForm((prev) => ({ ...prev, situation: 'ozel' }))}
-              >
-                Kendim yazacağım
-              </button>
-            </div>
-
-            {form.situation === 'ozel' && (
-              <input
-                className="input"
-                placeholder="Durumu kısaca yaz (en fazla 180 karakter)"
-                maxLength={180}
-                value={form.situationCustom ?? ''}
-                onChange={(e) => setForm((prev) => ({ ...prev, situationCustom: e.target.value }))}
-              />
-            )}
-          </StepCard>
-
-          <StepCard
-            step={3}
-            title="Yalan şiddeti"
-            summary={`${form.intensity} · ${band.label}`}
-            open={openStep === 3}
-            onOpen={() => setOpenStep(3)}
-          >
-            <div className="big-val">
-              <strong>{form.intensity}</strong>
-              <em>
-                {band.label}
-                {preview ? ` · risk ${RISK_LABEL[preview.level]}` : ''}
-              </em>
-            </div>
-            <IntensitySlider value={form.intensity} onChange={(value) => setForm((prev) => ({ ...prev, intensity: value }))} />
-          </StepCard>
-        </div>
-
-        {repeat && (
-          <p className="repeat-warning" role="status">
-            {repeat}
-          </p>
-        )}
-
-        <button className="cta" type="button" onClick={() => void generate()}>
-          Üret <small>3 alternatif</small>
-        </button>
-
-        {error && (
-          <p className="alert" role="alert">
-            {error}
-          </p>
-        )}
-
-        <button
-          type="button"
-          className="more-toggle"
-          aria-expanded={showAdvanced}
-          onClick={() => setShowAdvanced((v) => !v)}
-        >
-          Ton · Kanal {showAdvanced ? '▴' : '▾'}
-        </button>
-
-        {showAdvanced && (
-          <div className="more-box">
-            <p className="field-label">Kanal</p>
-            <div className="seg">
-              {CHANNELS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={form.channel === c.id ? 'is-active' : ''}
-                  onClick={() => setForm((prev) => ({ ...prev, channel: c.id }))}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-            <p className="field-label">Ton</p>
-            <div className="seg">
-              {STYLES.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={form.style === s.id ? 'is-active' : ''}
-                  onClick={() => setForm((prev) => ({ ...prev, style: s.id }))}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <p className="fineprint">Bu uygulama eğlence amaçlıdır. Resmî belge veya sağlık raporu üretmez.</p>
-      </>
     );
   }
 
   return (
-    <section className="screen" data-provider={provider} data-view={view}>
-      {screen}
-      {savedNote && (
-        <p className="toast" role="status">
-          {savedNote}
+    <section className="screen gen-form" data-provider={provider} data-view={view}>
+      <header className="brandbar">
+        <div className="brand">
+          <YalanMark size={20} color="#D0342C" needle="#141312" />
+          <span>Yalan Makinası</span>
+        </div>
+        <button type="button" className="ghost" onClick={() => setShowAdvanced((v) => !v)} aria-expanded={showAdvanced}>
+          Ton · Kanal {showAdvanced ? '▴' : '▾'}
+        </button>
+      </header>
+
+      <div className="card form-card">
+        <label className="field-label" htmlFor="who">
+          Kimin için?
+        </label>
+        <input
+          id="who"
+          className="input who-input"
+          list="ym-people"
+          placeholder="İsim yaz — ör. Ayşe, patron Mehmet"
+          maxLength={40}
+          value={person}
+          onChange={(e) => setPerson(e.target.value)}
+        />
+        <datalist id="ym-people">
+          {people.map((p) => (
+            <option key={p.person} value={p.person} />
+          ))}
+        </datalist>
+
+        <div className="chips who-chips">
+          {QUICK_TARGETS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`chip ${target === item.id ? 'is-active' : ''}`}
+              aria-pressed={target === item.id}
+              onClick={() => setTarget(item.id as GenerateRequest['target'])}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {repeat && <p className="repeat-line">{repeat}</p>}
+      </div>
+
+      <div className="card form-card">
+        <label className="field-label" htmlFor="what">
+          Ne oldu?
+        </label>
+        <textarea
+          id="what"
+          className="input what-input"
+          placeholder="Kendi cümlelerinle yaz: dün akşam iş çıktı, gelemedim…"
+          maxLength={180}
+          rows={3}
+          value={situationText}
+          onChange={(e) => setSituationText(e.target.value)}
+        />
+        <p className="char-hint">{situationText.trim().length}/180</p>
+      </div>
+
+      <div className="card form-card gauge-card">
+        <IntensityGauge value={intensity} onChange={setIntensity} />
+      </div>
+
+      {showAdvanced && (
+        <div className="card form-card advanced-card">
+          <p className="field-label">Kanal</p>
+          <div className="seg">
+            {CHANNELS.map((c) => (
+              <button key={c.id} type="button" className={channel === c.id ? 'is-active' : ''} onClick={() => setChannel(c.id)}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <p className="field-label">Ton</p>
+          <div className="seg">
+            {STYLES.map((s) => (
+              <button key={s.id} type="button" className={style === s.id ? 'is-active' : ''} onClick={() => setStyle(s.id)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <p className="alert" role="alert">
+          {error}
         </p>
       )}
+
+      <button className="cta gen-cta" type="button" onClick={() => void generate()} disabled={!ready}>
+        Üret <small>3 alternatif</small>
+      </button>
     </section>
   );
 }

@@ -1,25 +1,26 @@
 import { useEffect, useState } from 'react';
 
 type Props = {
-  /** Toplam beklenti (ms) — ilerleme çubuğu buna göre dolar; bitince %92'de bekler. */
+  /** Toplam beklenti (ms) — adımlar buna göre ilerler. */
   estimateMs?: number;
 };
 
-const PHRASES = ['durum okundu', 'bahane bulunuyor', 'detaylar uyduruluyor', 'risk hesaplanıyor', 'son rötuşlar'];
+const PHRASES = ['durum değerlendiriliyor', 'olasılıklar hesaplanıyor', 'yalan üretiliyor', 'mum tekrar yakıldı'];
 
 /** Üretim beklerken tam ekran yüklenme sahnesi. */
 export function GeneratingScreen({ estimateMs = 16000 }: Props) {
   const [step, setStep] = useState(0);
+  const last = PHRASES.length - 1;
 
   useEffect(() => {
-    const id = setInterval(() => setStep((s) => Math.min(s + 1, PHRASES.length - 1)), Math.max(1400, estimateMs / PHRASES.length));
+    const id = setInterval(() => setStep((s) => Math.min(s + 1, last)), Math.max(1600, estimateMs / PHRASES.length));
     return () => clearInterval(id);
-  }, [estimateMs]);
+  }, [estimateMs, last]);
 
   return (
     <section className="screen gen-screen" data-testid="generating-screen" aria-live="polite" aria-busy="true">
       <div className="gen-stage">
-        <div className="gen-ring">
+        <div className={`gen-ring ${step === last ? 'is-lit' : ''}`}>
           <span className="gen-stamp">YALAN</span>
         </div>
 
@@ -31,7 +32,7 @@ export function GeneratingScreen({ estimateMs = 16000 }: Props) {
               data-testid={i === step ? 'gen-active' : undefined}
             >
               {phrase}
-              {i === step && i < PHRASES.length - 1 ? '…' : ''}
+              {i === step && i < last ? '…' : ''}
             </li>
           ))}
         </ol>

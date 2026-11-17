@@ -318,3 +318,80 @@
 .person-box .field-label { margin: 0 0 6px; }
 .person-input { margin-top: 0; }
 .person-hint { margin: 8px 0 0; }
+
+/* ---------- tek ekran form ---------- */
+.gen-form { height: calc(100vh - 122px); display: flex; flex-direction: column; gap: 10px; }
+@supports (height: 100dvh) { .gen-form { height: calc(100dvh - 122px); } }
+.gen-form .brandbar { margin-bottom: 4px; }
+.form-card { padding: 13px 15px; margin: 0; }
+.form-card .field-label { margin: 0 0 7px; }
+.who-input, .what-input { margin-top: 0; }
+.what-input { min-height: 74px; resize: none; line-height: 1.5; }
+.who-chips { margin-top: 10px; gap: 7px; }
+.who-chips .chip { padding: 8px 12px; min-height: 38px; font-size: 13px; }
+.char-hint { margin: 6px 0 0; font-size: 10.5px; color: var(--color-faint); text-align: right; }
+.repeat-line { margin: 9px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--color-red); }
+.gauge-card { padding: 6px 12px 10px; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+.gauge { width: 100%; }
+.advanced-card { padding: 12px 15px; }
+.gen-cta { margin-top: auto; margin-bottom: 2px; }
+
+/* ---------- ibre ---------- */
+.gauge { display: flex; flex-direction: column; align-items: center; }
+.gauge-readout { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+.gauge-readout strong { font-size: 30px; font-weight: 800; letter-spacing: -.03em; color: var(--color-ink); line-height: 1; }
+.gauge-readout em { font-style: normal; font-size: 13px; color: var(--color-red); font-weight: 650; }
+.gauge-svg { width: 100%; max-width: 300px; height: auto; touch-action: none; cursor: grab; outline: none; }
+.gauge-svg:focus-visible { outline: 2px solid var(--color-red-line); outline-offset: 4px; border-radius: 12px; }
+.gauge.is-dragging .gauge-svg { cursor: grabbing; }
+.gauge-track { fill: none; stroke: var(--color-line); stroke-width: 10; stroke-linecap: round; }
+.gauge-progress { fill: none; stroke: var(--color-red); stroke-width: 10; stroke-linecap: round; transition: stroke-dasharray 140ms ease; }
+.gauge-tick { stroke: var(--color-line); stroke-width: 3; stroke-linecap: round; }
+.gauge-tick.is-on { stroke: var(--color-red-line); }
+.gauge-needle { stroke: var(--color-ink); stroke-width: 5; stroke-linecap: round; transition: x2 140ms ease, y2 140ms ease; }
+.gauge-hub { fill: #fff; stroke: var(--color-ink); stroke-width: 3; }
+.gauge-hub-dot { fill: var(--color-red); }
+.gauge-hint { margin: 2px 0 0; font-size: 11px; color: var(--color-faint); }
+
+/* ---------- öğretici ---------- */
+.tutorial { position: fixed; inset: 0; background: rgba(20,19,18,.55); display: grid; place-items: center; padding: 24px; z-index: 40; backdrop-filter: blur(2px); }
+.tutorial-card { background: #fff; border-radius: 22px; padding: 24px 22px 20px; max-width: 340px; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+.tutorial-card h3 { font-size: 18px; margin: 14px 0 6px; letter-spacing: -.01em; }
+.tutorial-card p { font-size: 13px; line-height: 1.55; color: var(--color-muted); margin: 0 0 18px; }
+.tutorial-hand { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 26px; }
+.tutorial-hand span { animation: hand-swipe 1.8s ease-in-out infinite; display: inline-block; }
+.tutorial-arrow { font-style: normal; color: var(--color-red); font-size: 20px; animation: arrow-slide 1.8s ease-in-out infinite; }
+@keyframes hand-swipe { 0%,100% { transform: translateX(-6px); } 55% { transform: translateX(16px); } }
+@keyframes arrow-slide { 0%,100% { opacity: .25; transform: translateX(-4px); } 55% { opacity: 1; transform: translateX(6px); } }
+
+/* ---------- destede düzenleme ---------- */
+.deck-card.is-editing { min-height: 0; }
+.deck-edit { display: flex; flex-direction: column; flex: 1; margin-top: 12px; gap: 10px; }
+.deck-edit-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.icon-btn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--color-line); background: #fff; color: var(--color-muted); font-size: 14px; cursor: pointer; }
+.icon-btn:hover { border-color: var(--color-red-line); color: var(--color-red); }
+
+/* ---------- seçilen + sohbet ---------- */
+.picked { border: 1px solid var(--color-line); border-radius: 16px; padding: 13px 15px; background: #fff; }
+.picked-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.picked-text { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--color-ink); display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.chat { margin-top: 12px; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 4px; }
+.chat-caption { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-faint); margin: 0 0 2px; font-weight: 700; }
+.bubble-row { display: flex; flex-direction: column; gap: 6px; }
+.bubble { position: relative; max-width: 84%; padding: 9px 12px 10px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; }
+.bubble-who { display: block; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 800; margin-bottom: 3px; opacity: .8; }
+.bubble.in { align-self: flex-start; background: #f2efe9; color: var(--color-ink-soft); border-bottom-left-radius: 5px; }
+.bubble.out { align-self: flex-end; background: #d9f2d0; color: #10310b; border-bottom-right-radius: 5px; }
+
+/* ---------- yuvarlak eylem çubuğu ---------- */
+.dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: 72px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #fff; border: 1px solid var(--color-line); border-radius: 999px; box-shadow: 0 14px 34px rgba(20,19,18,.14); z-index: 20; }
+.dock-btn { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; border: 1px solid transparent; background: var(--color-line-soft); color: var(--color-ink-soft); cursor: pointer; transition: transform 120ms, background 120ms; }
+.dock-btn:hover { transform: translateY(-1px); }
+.dock-btn svg { width: 22px; height: 22px; fill: currentColor; stroke: currentColor; }
+.dock-btn.wa { background: #e8f7ea; color: #1f7a34; }
+.dock-btn.ig { background: #fdeef4; color: #c13584; }
+.dock-btn.copy { background: var(--color-line-soft); color: var(--color-muted); }
+.dock-btn.refresh { background: var(--color-line-soft); color: var(--color-ink-soft); }
+.dock-btn.save { width: 62px; height: 62px; background: var(--color-red); color: #fff; box-shadow: 0 10px 26px rgba(208,52,44,.35); }
+.dock-btn.save svg { width: 26px; height: 26px; }
+.detail-screen { padding-bottom: 96px; }

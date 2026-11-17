@@ -1,5 +1,20 @@
 # Sürüm geçmişi
 
+## v0.6.0 — 17 Kasım 2026
+
+**Üretim ekranı tek ekrana indi, akış sadeleşti.**
+
+- **Form:** "Kimin için?" kutusunun altında dört hızlı seçenek (Anne-baba / Arkadaş / Patron / Sevgili).
+  "Ne oldu?" artık hazır çipler değil, serbest metin. Ton/kanal katlanır bölümde kaldı.
+- **İbre:** 1-10 yalan şiddeti yarım daire gösterge + sürüklenebilir ibre (sağa çek → artar, sola → azalır,
+  klavye ile de ayarlanır). Sayfa kaydırmıyor.
+- **Yüklenme metinleri:** durum değerlendiriliyor → olasılıklar hesaplanıyor → yalan üretiliyor → mum tekrar yakıldı.
+- **Deste:** ilk açılışta kaydırma öğreticisi (bir kez gösterilir), kart üzerinde kalemle **düzenleme**.
+- **Tam ekran:** seçilen yalan en üstte; "karşı taraf ne sorar" WhatsApp tarzı balonlarla (solda gri soru,
+  sağda yeşil cevap, "karşı taraf"/"sen" etiketli). Altta yuvarlak eylem çubuğu: WhatsApp, Instagram/paylaş,
+  **Defter'e kaydet**, yenile, kopyala.
+- Test sayısı 124 → 131 (ibre klavye/sınır, öğretici, düzenleme, balonlar, eylem çubuğu).
+
 ## v0.5.0 — 17 Kasım 2026
 
 **Ürün odağı değişti: bahane üretici → yalan defteri.** Slogan: "Yalancının mumu artık hep yanacak."

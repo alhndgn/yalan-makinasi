@@ -122,7 +122,7 @@ export function Settings({ aiMode, onBack }: Props) {
         </p>
       )}
 
-      <p className="fineprint">Yalan Makinası · v0.5.0</p>
+      <p className="fineprint">Yalan Makinası · v0.6.0</p>
     </section>
   );
 }
