@@ -1,4 +1,11 @@
-import type { GenerateRequest, ManualLieInput, PersonSummary, SavedLie, Variant } from '../../../shared/schema.ts';
+import type {
+  GenerateRequest,
+  ManualLieInput,
+  PersonProfile,
+  PersonSummary,
+  SavedLie,
+  Variant,
+} from '../../../shared/schema.ts';
 import type { SituationId, Status, TargetId } from '../../../shared/constants.ts';
 import { detailCountFor } from '../../../engine/compose.ts';
 import { prepareLie } from '../../../engine/prepareLie.ts';
@@ -14,6 +21,7 @@ import { getDeviceId } from './deviceId.ts';
  * üretim tarayıcıda çalışan şablon motorunda. API istemcisiyle aynı arayüzü sunar.
  */
 const LIES_KEY = 'ym_lies_v1';
+const PEOPLE_KEY = 'ym_people_v1';
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
 type StoredLie = SavedLie & {
@@ -49,6 +57,26 @@ function historyFor(person: string): { text: string; situation: string; createdA
     .filter((lie) => (lie.person ?? '') === person)
     .slice(0, 5)
     .map((lie) => ({ text: lie.text, situation: lie.situation, createdAt: lie.createdAt }));
+}
+
+function readProfiles(): Record<string, PersonProfile> {
+  try {
+    const raw = localStorage.getItem(PEOPLE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : {};
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, PersonProfile>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeProfile(profile: PersonProfile): void {
+  try {
+    const all = readProfiles();
+    all[profile.name] = profile;
+    localStorage.setItem(PEOPLE_KEY, JSON.stringify(all));
+  } catch {
+    /* yoksay */
+  }
 }
 
 function recentFor(target: TargetId): RecentLie[] {
@@ -117,7 +145,11 @@ export const localData = {
     const ai = readAiConfig();
     if (aiReady(ai)) {
       try {
-        return { variants: await generateWithAi(body, ai, { history: historyFor(body.person ?? '') }), provider: 'ai' };
+        const profile = readProfiles()[(body.person ?? '').trim()] ?? null;
+        return {
+          variants: await generateWithAi(body, ai, { history: historyFor(body.person ?? ''), profile }),
+          provider: 'ai',
+        };
       } catch {
         // AI'ya ulaşamadık: sessizce şablon motoruna düş, kullanıcı hata görmesin.
       }
@@ -231,6 +263,13 @@ export const localData = {
         conflicts: 0,
         targets: [],
       };
+      const profile = readProfiles()[person];
+      if (profile) {
+        current.relation = profile.relation;
+        current.gender = profile.gender;
+        current.closeness = profile.closeness;
+        current.notes = profile.notes;
+      }
       current.count += 1;
       current.lastAt = Math.max(current.lastAt, lie.createdAt);
       if (lie.status === 'beklemede') current.pending += 1;
@@ -256,6 +295,15 @@ export const localData = {
 
   async history(person: string): Promise<{ text: string; situation: string; createdAt: number }[]> {
     return historyFor(person);
+  },
+
+  async getPersonProfile(name: string): Promise<PersonProfile | null> {
+    return readProfiles()[name] ?? null;
+  },
+
+  async savePersonProfile(profile: PersonProfile): Promise<{ ok: true }> {
+    writeProfile(profile);
+    return { ok: true };
   },
 
   async updateStatus(id: string, status: Status): Promise<{ ok: true }> {

@@ -1,5 +1,5 @@
 import type { SituationId } from '../shared/constants.ts';
-import type { GenerateRequest, Variant } from '../shared/schema.ts';
+import type { GenerateRequest, PersonProfile, Variant } from '../shared/schema.ts';
 
 /** Aynı kişiye söylenmiş son 30 günün kayıtları (çelişki hesabı için). */
 export type RecentLie = { situation: SituationId; detailTags: string[] };
@@ -13,6 +13,8 @@ export type GenerateContext = {
   recent: RecentLie[];
   person?: string;
   history?: HistoryEntry[];
+  profile?: PersonProfile | null;
+  hint?: string;
 };
 
 export type ProviderId = 'template' | 'ai' | 'ollama' | 'openrouter';

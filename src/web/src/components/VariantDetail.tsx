@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Variant } from '../../../shared/schema.ts';
+import { shareElsewhere, shareToWhatsApp } from '../lib/share.ts';
 
 type Props = {
   variant: Variant;
@@ -15,25 +16,16 @@ type Props = {
 const RISK_LABEL: Record<Variant['riskLevel'], string> = { dusuk: 'düşük', orta: 'orta', yuksek: 'yüksek' };
 const STRATEGY_LABEL: Record<Variant['strategy'], string> = { sade: 'Sade', detayli: 'Detaylı', duygusal: 'Duygusal' };
 
-/** Instagram gibi metin kabul etmeyen uygulamalar için: paylaşım sayfası, yoksa kopyala + uygulamayı aç. */
-async function shareElsewhere(text: string): Promise<'paylasildi' | 'kopyalandi'> {
-  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-    try {
-      await navigator.share({ text });
-      return 'paylasildi';
-    } catch {
-      /* kullanıcı vazgeçti ya da desteklenmiyor */
-    }
-  }
-  await navigator.clipboard.writeText(text).catch(() => null);
-  window.open('https://www.instagram.com/', '_blank', 'noopener');
-  return 'kopyalandi';
+/** Balonda kimin yazdığını gösteren etiket: kişi adı varsa adı, yoksa "karşı taraf". */
+function whoLabel(person: string): string {
+  const clean = person.trim();
+  return clean || 'karşı taraf';
 }
 
 /** Seçilen yalanın tam ekran hâli: WhatsApp konuşması gibi soru-cevap + yuvarlak eylemler. */
 export function VariantDetail({ variant, index, total, personLabel, onSave, onRegenerate, onBack, note }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
-  const waHref = `https://wa.me/?text=${encodeURIComponent(variant.text)}`;
+  void 0;
 
   async function copyText(text: string) {
     try {
@@ -60,7 +52,7 @@ export function VariantDetail({ variant, index, total, personLabel, onSave, onRe
 
       <div className="picked">
         <div className="picked-head">
-          <span className="kicker">seçtiğin yalan</span>
+          <span className="kicker">seçtiğin bahane</span>
           <span className={`risk risk-${variant.riskLevel}`}>
             risk {RISK_LABEL[variant.riskLevel]} · {variant.riskScore}
           </span>
@@ -71,12 +63,15 @@ export function VariantDetail({ variant, index, total, personLabel, onSave, onRe
       </div>
 
       <div className="chat" data-testid="chat">
-        <p className="chat-caption">Karşı taraf ne sorar — cevaplar hazır</p>
+        <div className="chat-head">
+          <span className="chat-caption">Karşı taraf ne sorar</span>
+          <span className="chat-caption chat-caption-right">Hazır Cevaplar</span>
+        </div>
         {variant.queries.length === 0 && <p className="small muted">Bu metin için soru provası yok.</p>}
         {variant.queries.map((qa, i) => (
           <div key={`${qa.q}-${i}`} className="bubble-row">
             <div className="bubble in">
-              <span className="bubble-who">karşı taraf</span>
+              <span className="bubble-who">{whoLabel(personLabel)}</span>
               {qa.q}
             </div>
             <div className="bubble out">
@@ -99,11 +94,16 @@ export function VariantDetail({ variant, index, total, personLabel, onSave, onRe
       )}
 
       <div className="dock" data-testid="dock">
-        <a className="dock-btn wa" href={waHref} target="_blank" rel="noreferrer" aria-label="WhatsApp'ta paylaş">
+        <button
+          type="button"
+          className="dock-btn wa"
+          aria-label="WhatsApp'ta paylaş"
+          onClick={() => void shareToWhatsApp(variant.text)}
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.2-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 .9-2.2.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.1.2-.3.3-.1.6.2.3.7 1.2 1.5 1.9 1 .9 1.7 1.1 2 1.2.2.1.4.1.6-.1l.7-.9c.2-.2.4-.2.6-.1l2 .9c.2.1.4.1.4.3 0 .1 0 .9-.1 1.1Z" />
           </svg>
-        </a>
+        </button>
 
         <button
           type="button"

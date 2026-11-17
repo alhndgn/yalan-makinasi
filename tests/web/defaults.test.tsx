@@ -20,7 +20,8 @@ describe('kayıtlı varsayılanlar', () => {
     const gen = calls.find(([url]) => String(url).includes('/api/generate'))!;
     const payload = JSON.parse(String(gen[1].body));
     expect(payload.style).toBe('esprili');
-    expect(payload.intensity).toBe(8);
+    // şiddet artık kullanıcıya sorulmuyor: sabit doz gönderilir
+    expect(payload.intensity).toBe(6);
   });
 
   it('bozuk ayar kaydı üretimi bozmaz', async () => {

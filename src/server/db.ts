@@ -85,6 +85,18 @@ CREATE TABLE IF NOT EXISTS lies (
 CREATE INDEX IF NOT EXISTS idx_lies_device ON lies(device_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lies_target ON lies(device_id, target, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS people (
+  device_id   TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  relation    TEXT NOT NULL DEFAULT 'arkadas',
+  gender      TEXT NOT NULL DEFAULT 'belirsiz',
+  closeness   INTEGER NOT NULL DEFAULT 5,
+  notes       TEXT NOT NULL DEFAULT '',
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (device_id, name)
+);
+
 CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL);
 INSERT INTO schema_version (version) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM schema_version);
 `;
@@ -200,8 +212,11 @@ export function listPeople(db: DatabaseSync, deviceId: string): PersonSummary[] 
     conflicts.set(key, (conflicts.get(key) ?? 0) + 1);
   }
 
+  const profiles = new Map(listPersonProfiles(db, deviceId).map((p) => [p.name, p]));
+
   return rows.map((row) => {
     const person = row.person ?? '';
+    const profile = profiles.get(person);
     return {
       person,
       count: Number(row.count),
@@ -209,6 +224,10 @@ export function listPeople(db: DatabaseSync, deviceId: string): PersonSummary[] 
       pending: Number(row.pending ?? 0),
       conflicts: conflicts.get(person) ?? 0,
       targets: (row.targets ?? '').split(',').filter(Boolean),
+      relation: (profile?.relation ?? undefined) as SavedLie['target'] | undefined,
+      gender: (profile?.gender ?? undefined) as 'kadin' | 'erkek' | 'belirsiz' | undefined,
+      closeness: profile?.closeness,
+      notes: profile?.notes,
     };
   });
 }
@@ -236,6 +255,45 @@ export function listHistoryForPerson(
     )
     .all(deviceId, person, limit) as unknown as { text: string; situation: string; created_at: number }[];
   return rows.map((row) => ({ text: row.text, situation: row.situation, createdAt: row.created_at }));
+}
+
+export type StoredPersonProfile = {
+  name: string;
+  relation: string;
+  gender: string;
+  closeness: number;
+  notes: string;
+};
+
+export function getPersonProfile(db: DatabaseSync, deviceId: string, name: string): StoredPersonProfile | null {
+  const row = db
+    .prepare('SELECT name, relation, gender, closeness, notes FROM people WHERE device_id = ? AND name = ?')
+    .get(deviceId, name) as unknown as StoredPersonProfile | undefined;
+  return row ?? null;
+}
+
+export function listPersonProfiles(db: DatabaseSync, deviceId: string): StoredPersonProfile[] {
+  return db
+    .prepare('SELECT name, relation, gender, closeness, notes FROM people WHERE device_id = ?')
+    .all(deviceId) as unknown as StoredPersonProfile[];
+}
+
+export function upsertPersonProfile(db: DatabaseSync, deviceId: string, profile: StoredPersonProfile): void {
+  const now = Date.now();
+  db.prepare(
+    `INSERT INTO people (device_id, name, relation, gender, closeness, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(device_id, name) DO UPDATE SET
+       relation = excluded.relation,
+       gender = excluded.gender,
+       closeness = excluded.closeness,
+       notes = excluded.notes,
+       updated_at = excluded.updated_at`,
+  ).run(deviceId, profile.name, profile.relation, profile.gender, profile.closeness, profile.notes, now, now);
+}
+
+export function deletePersonProfile(db: DatabaseSync, deviceId: string, name: string): void {
+  db.prepare('DELETE FROM people WHERE device_id = ? AND name = ?').run(deviceId, name);
 }
 
 export function updateLieStatus(db: DatabaseSync, id: string, deviceId: string, status: Status): boolean {

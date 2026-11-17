@@ -26,6 +26,11 @@ describe('tek ekran form', () => {
     expect(screen.queryByRole('button', { name: 'Parayı harcadım' })).toBeNull();
   });
 
+  it('nasıl bir yalan olsun alanı opsiyonel olarak var', async () => {
+    render(<Generator onGenerated={() => {}} />);
+    expect(await screen.findByLabelText(/nasıl bir yalan olsun/i)).toBeInTheDocument();
+  });
+
   it('metin yazılmadan üret düğmesi kapalı', async () => {
     render(<Generator onGenerated={() => {}} />);
     expect(await screen.findByRole('button', { name: /üret/i })).toBeDisabled();

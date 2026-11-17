@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ManualLieInput, PersonSummary, SavedLie } from '../../../shared/schema.ts';
+import type { ManualLieInput, PersonProfile, PersonSummary, SavedLie } from '../../../shared/schema.ts';
 import type { Status } from '../../../shared/constants.ts';
 import { CHANNELS, SITUATIONS, TARGETS } from '../../../shared/constants.ts';
 import { fallbackAnswer } from '../../../engine/prompt.ts';
@@ -13,7 +13,8 @@ type View =
   | { kind: 'people' }
   | { kind: 'person'; person: string }
   | { kind: 'lie'; lie: SavedLie }
-  | { kind: 'new' };
+  | { kind: 'new' }
+  | { kind: 'profile'; person: string };
 
 const NEXT_STATUS: Record<Status, Status> = { beklemede: 'tuttu', tuttu: 'tutmadı', 'tutmadı': 'beklemede' };
 const STATUS_LABEL: Record<Status, string> = { beklemede: 'beklemede', tuttu: 'tuttu', 'tutmadı': 'tutmadı' };
@@ -170,6 +171,7 @@ export function Ledger() {
                       <span className="person-name">{person.person || 'İsimsiz'}</span>
                       <span className="person-meta">
                         {person.targets.map((t) => TARGET_LABEL[t] ?? t).join(' · ')}
+                        {person.closeness ? ` · samimiyet ${person.closeness}/10` : ''}
                       </span>
                     </span>
                     <span className="person-side">
@@ -192,6 +194,9 @@ export function Ledger() {
             </button>
             <span className="detail-title">{view.person || 'İsimsiz'}</span>
             <span className="spacer" />
+            <button type="button" className="ghost" onClick={() => setView({ kind: 'profile', person: view.person })}>
+              Profil
+            </button>
             <button type="button" className="ghost" onClick={() => setView({ kind: 'new' })}>
               + Ekle
             </button>
@@ -231,6 +236,18 @@ export function Ledger() {
       )}
 
       {view.kind === 'new' && <NewLie onCancel={() => setView({ kind: 'people' })} onSave={saveManual} busy={busy} />}
+
+      {view.kind === 'profile' && (
+        <ProfileEditor
+          person={view.person}
+          onBack={() => setView({ kind: 'person', person: view.person })}
+          onSaved={async () => {
+            await refreshPeople();
+            flash('Profil kaydedildi.');
+            setView({ kind: 'person', person: view.person });
+          }}
+        />
+      )}
 
       {note && (
         <p className="toast" role="status">
@@ -471,6 +488,147 @@ function NewLie({
         onClick={() => void onSave({ person, text, channel, target, situation })}
       >
         {busy ? 'Kaydediliyor…' : 'Deftere ekle'}
+      </button>
+    </div>
+  );
+}
+
+
+/** Kişi profili: yapay zekâ hitap ve üslubu buradan öğrenir. */
+function ProfileEditor({
+  person,
+  onBack,
+  onSaved,
+}: {
+  person: string;
+  onBack: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [profile, setProfile] = useState<PersonProfile | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    data
+      .getPersonProfile(person)
+      .then((existing) => {
+        if (!alive) return;
+        setProfile(
+          existing ?? {
+            name: person,
+            relation: 'arkadas',
+            gender: 'belirsiz',
+            closeness: 5,
+            notes: '',
+          },
+        );
+      })
+      .catch(() => {
+        if (!alive) return;
+        setProfile({ name: person, relation: 'arkadas', gender: 'belirsiz', closeness: 5, notes: '' });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [person]);
+
+  if (!profile) return <p className="muted">Yükleniyor…</p>;
+
+  async function save() {
+    if (!profile) return;
+    setBusy(true);
+    try {
+      await data.savePersonProfile(profile);
+      await onSaved();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="profile-editor" data-testid="profile-editor">
+      <header className="detail-top">
+        <button type="button" className="round" onClick={onBack} aria-label="Kişiye dön">
+          ‹
+        </button>
+        <span className="detail-title">{person}</span>
+        <span className="spacer" />
+      </header>
+
+      <p className="muted small">
+        Bu bilgiler yapay zekânın hitabını ve üslubunu belirler: kime nasıl konuşacağını, ne kadar samimi olacağını.
+      </p>
+
+      <p className="field-label">İlişki</p>
+      <div className="chips">
+        {TARGETS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`chip ${profile.relation === t.id ? 'is-active' : ''}`}
+            onClick={() => setProfile({ ...profile, relation: t.id })}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="field-label">Cinsiyet</p>
+      <div className="seg">
+        {[
+          { id: 'kadin', label: 'Kadın' },
+          { id: 'erkek', label: 'Erkek' },
+          { id: 'belirsiz', label: 'Belirtme' },
+        ].map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            className={profile.gender === g.id ? 'is-active' : ''}
+            onClick={() => setProfile({ ...profile, gender: g.id as PersonProfile['gender'] })}
+          >
+            {g.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="field-label">
+        Aramızdaki samimiyet: <strong>{profile.closeness}/10</strong>
+      </p>
+      <input
+        className="range"
+        type="range"
+        min={1}
+        max={10}
+        step={1}
+        value={profile.closeness}
+        onChange={(e) => setProfile({ ...profile, closeness: Number(e.target.value) })}
+        aria-label="Samimiyet"
+      />
+      <p className="small faint closeness-hint">
+        {profile.closeness <= 3
+          ? 'mesafeli · resmî konuşuruz'
+          : profile.closeness <= 6
+            ? 'tanıdık · laubali değil'
+            : profile.closeness <= 8
+              ? 'samimi · rahat konuşuruz'
+              : 'çok samimi · her şeyi konuşuruz'}
+      </p>
+
+      <label className="field-label" htmlFor="profile-notes">
+        Aklında tutması gerekenler
+      </label>
+      <textarea
+        id="profile-notes"
+        className="input textarea"
+        placeholder="ör. öğretmen, konum paylaşıyor, akşamları müsait değil"
+        maxLength={300}
+        rows={3}
+        value={profile.notes}
+        onChange={(e) => setProfile({ ...profile, notes: e.target.value })}
+      />
+
+      <button type="button" className="cta" onClick={() => void save()} disabled={busy}>
+        {busy ? 'Kaydediliyor…' : 'Profili kaydet'}
       </button>
     </div>
   );

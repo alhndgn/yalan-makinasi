@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
   manualLieSchema,
+  personProfileSchema,
   previewQuerySchema,
   saveLieRequestSchema,
   updateStatusSchema,
@@ -18,6 +19,9 @@ import {
   deleteAllLies,
   deleteLie,
   findConflictPairs,
+  getPersonProfile,
+  listPersonProfiles,
+  upsertPersonProfile,
   insertLie,
   listByPerson,
   listLies,
@@ -41,6 +45,32 @@ export function registerLieRoutes(app: FastifyInstance, db: DatabaseSync) {
   app.get('/api/lies', async (req) => {
     const limit = limitSchema.parse((req.query as { limit?: unknown }).limit ?? 50);
     return { items: listLies(db, deviceIdOf(req), limit) };
+  });
+
+  /** Kişi profilleri (hitap/üslup için). */
+  app.get('/api/people', async (req) => ({
+    people: listPersonProfiles(db, deviceIdOf(req)),
+  }));
+
+  app.put('/api/people/:name', async (req, reply) => {
+    const { name } = req.params as { name: string };
+    const parsed = personProfileSchema.safeParse({ ...(req.body as object), name: decodeURIComponent(name) });
+    if (!parsed.success) return fail(reply, 400, 'VALIDATION', 'Kişi profili geçersiz.');
+    upsertPersonProfile(db, deviceIdOf(req), {
+      name: parsed.data.name,
+      relation: parsed.data.relation,
+      gender: parsed.data.gender,
+      closeness: parsed.data.closeness,
+      notes: parsed.data.notes,
+    });
+    return { ok: true };
+  });
+
+  app.get('/api/people/:name', async (req, reply) => {
+    const { name } = req.params as { name: string };
+    const profile = getPersonProfile(db, deviceIdOf(req), decodeURIComponent(name));
+    if (!profile) return fail(reply, 404, 'NOT_FOUND', 'Profil yok.');
+    return profile;
   });
 
   /** Defterin ana görünümü: kişiye göre özet. */

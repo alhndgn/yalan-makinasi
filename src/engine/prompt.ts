@@ -7,6 +7,74 @@
 
 export type HistoryEntry = { text: string; situation: string; createdAt: number };
 
+/** Kişi profili: hitap ve üslup için. */
+export type PersonProfileInput = {
+  name: string;
+  relation?: string;
+  gender?: 'kadin' | 'erkek' | 'belirsiz';
+  closeness?: number;
+  notes?: string;
+};
+
+const RELATION_LABEL: Record<string, string> = {
+  patron: 'patron / iş yeri',
+  sevgili: 'sevgili / eş',
+  anne: 'anne-baba / aile',
+  arkadas: 'arkadaş',
+  hoca: 'hoca / öğretmen',
+  musteri: 'müşteri',
+  ozel: 'diğer',
+};
+
+const RELATION_TONE: Record<string, string> = {
+  patron: 'saygılı ama yapmacık olmayan; "abi/abla" ya da "hocam" gibi iş ortamına uygun hitap',
+  sevgili: 'sıcak, biraz mahcup, sevgi sözcükleri ölçülü ("kuzum", "aşkım" gibi)',
+  anne: 'doğal, kısa, biraz da çocukça; "anne", "baba" hitapları',
+  arkadas: 'rahat, samimi, argo dozunda; lakap kullanılabilir',
+  hoca: 'saygılı, "hocam" hitabı, resmî ama soğuk değil',
+  musteri: 'kibar, net, kurumsal mesafe korunarak',
+  ozel: 'kişiye göre ölçülü, nötr',
+};
+
+function formatCloseness(value: number | undefined): string {
+  const n = typeof value === 'number' ? value : 5;
+  if (n <= 3) return `${n}/10 — mesafeli, resmî konuşuruz`;
+  if (n <= 6) return `${n}/10 — tanıdık ama laubali değil`;
+  if (n <= 8) return `${n}/10 — samimi, rahat konuşuruz`;
+  return `${n}/10 — çok samimi, her şeyi konuşuruz`;
+}
+
+function profileSection(profile: PersonProfileInput | undefined): string {
+  if (!profile?.name) return '';
+  const relation = profile.relation ?? 'arkadas';
+  const gender = profile.gender ?? 'belirsiz';
+  const genderLine =
+    gender === 'kadin'
+      ? 'kadın — hitap ederken kadınlara uygun ifadeler kullan (abla, hanım, Ayşe abla gibi); erkeğe denir gibi konuşma'
+      : gender === 'erkek'
+        ? 'erkek — hitap ederken erkeklere uygun ifadeler kullan (abi, bey, Mehmet abi gibi)'
+        : 'belirtilmemiş — cinsiyet varsayımı yapma, ismi doğrudan kullan';
+
+  return [
+    `## Kişi: ${profile.name}`,
+    `- İlişki: ${RELATION_LABEL[relation] ?? relation}`,
+    `- Cinsiyet: ${genderLine}`,
+    `- Samimiyet: ${formatCloseness(profile.closeness)}`,
+    `- Üslup: ${RELATION_TONE[relation] ?? 'kişiye göre ölçülü'}`,
+    profile.notes ? `- Notlar: ${profile.notes}` : '',
+    '',
+    'Hitap ve sen/siz seçimini bu profile göre yap. Samimiyet düşükse "siz" ve resmî dil, yüksekse "sen" ve rahat dil kullan.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+function hintSection(hint: string | undefined): string {
+  const clean = (hint ?? '').trim();
+  if (!clean) return '';
+  return `## İstenen yalan türü\nKullanıcı bu yalanın şöyle olmasını istedi: "${clean}"\nMetinler bu yönde olsun; yukarıdaki güvenlik sınırlarını yine ihlal etme.`;
+}
+
 export type IntensityBand = {
   min: number;
   max: number;
@@ -142,7 +210,10 @@ function historySection(person: string | undefined, history: HistoryEntry[] | un
 }
 
 /** Şiddete göre sistem promptu üretir (aynı girdi → aynı prompt). */
-export function buildSystemPrompt(intensity: number, opts: { person?: string; history?: HistoryEntry[] } = {}): string {
+export function buildSystemPrompt(
+  intensity: number,
+  opts: { person?: string; history?: HistoryEntry[]; profile?: PersonProfileInput; hint?: string } = {},
+): string {
   const band = bandFor(intensity);
   const value = Math.min(10, Math.max(1, Math.round(Number.isFinite(intensity) ? intensity : 5)));
   const history = historySection(opts.person, opts.history);
@@ -150,7 +221,9 @@ export function buildSystemPrompt(intensity: number, opts: { person?: string; hi
     RULES,
     `## Bu istek için bant: ${band.name} (şiddet ${value}/10)`,
     band.directive,
+    profileSection(opts.profile ?? (opts.person ? { name: opts.person } : undefined)),
     history,
+    hintSection(opts.hint),
     EXAMPLES,
   ]
     .filter(Boolean)

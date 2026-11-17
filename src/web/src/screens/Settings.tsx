@@ -1,18 +1,12 @@
 import { useState } from 'react';
-import { DEFAULT_FORM, INTENSITY_MAX, INTENSITY_MIN, STYLES } from '../../../shared/constants.ts';
+import { STYLES } from '../../../shared/constants.ts';
 import type { AiMode } from '../../../shared/constants.ts';
 import { data } from '../lib/data.ts';
 import { readDefaults, writeDefaults, type Defaults } from '../lib/defaults.ts';
 
-type Props = { aiMode: AiMode; onBack: () => void };
+type Props = { onBack: () => void };
 
-const AI_LABEL: Record<AiMode, string> = {
-  off: 'Şablon motoru · ağ kullanılmıyor',
-  ollama: 'Yerel model (Ollama · 3090)',
-  openrouter: 'Bulut (OpenRouter)',
-};
-
-export function Settings({ aiMode, onBack }: Props) {
+export function Settings({ onBack }: Props) {
   const [defaults, setDefaults] = useState<Defaults>(readDefaults);
   const [note, setNote] = useState<string | null>(null);
   function saveDefaults(next: Defaults) {
@@ -49,16 +43,7 @@ export function Settings({ aiMode, onBack }: Props) {
   return (
     <section className="stack">
       <h1 className="h1">Ayarlar</h1>
-      <p className="muted">Motor, varsayılanlar ve verilerin.</p>
-
-      <div className="card">
-        <p className="label">Yapay zekâ</p>
-        <p className="setting-value">{AI_LABEL[aiMode]}</p>
-        <p className="muted small">
-          Şablon motoru her zaman çalışır. Model seçiliyse metinler önce modelden istenir; model yanıt vermezse
-          sessizce şablona dönülür.
-        </p>
-      </div>
+      <p className="muted">Varsayılanlar ve verilerin.</p>
 
       <div className="card">
         <p className="label">Varsayılan ton</p>
@@ -75,15 +60,6 @@ export function Settings({ aiMode, onBack }: Props) {
           ))}
         </div>
 
-        <p className="label">Varsayılan yalan şiddeti</p>
-        <input
-          className="input"
-          type="number"
-          min={INTENSITY_MIN}
-          max={INTENSITY_MAX}
-          value={defaults.intensity}
-          onChange={(e) => saveDefaults({ ...defaults, intensity: Number(e.target.value) })}
-        />
       </div>
 
       <div className="card">
@@ -122,7 +98,7 @@ export function Settings({ aiMode, onBack }: Props) {
         </p>
       )}
 
-      <p className="fineprint">Yalan Makinası · v0.6.0</p>
+      <p className="fineprint">Yalan Makinası · v0.7.0</p>
     </section>
   );
 }

@@ -94,14 +94,14 @@ export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onB
           {!editing && (
             <button
               type="button"
-              className="icon-btn"
+              className="edit-btn"
               aria-label="Yalanı düzenle"
               onClick={() => {
                 setDraft(variant.text);
                 setEditing(true);
               }}
             >
-              ✎
+              ✎ Düzenle
             </button>
           )}
         </div>
@@ -111,11 +111,13 @@ export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onB
             <textarea
               className="input textarea"
               value={draft}
-              rows={7}
+              rows={6}
               maxLength={1000}
+              autoFocus
               onChange={(e) => setDraft(e.target.value)}
               aria-label="Yalan metni"
             />
+            <p className="small faint">İstediğin kısmını değiştir — gerisi olduğu gibi kalır.</p>
             <div className="deck-edit-actions">
               <button type="button" className="ghost" onClick={() => setEditing(false)}>
                 Vazgeç

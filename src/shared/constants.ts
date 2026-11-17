@@ -47,6 +47,8 @@ export type Status = (typeof STATUSES)[number];
 export const PERSON_MAX = 40;
 /** Kaydın kaynağı: yapay zekâ önerisi mi, kullanıcı kendi mi yazdı. */
 export const LIE_SOURCES = ['ai', 'manual'] as const;
+/** "Nasıl bir yalan olsun?" alanının sınırı. */
+export const HINT_MAX = 140;
 export type LieSource = (typeof LIE_SOURCES)[number];
 
 export const INTENSITY_MIN = 1;

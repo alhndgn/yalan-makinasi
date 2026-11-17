@@ -1,4 +1,11 @@
-import type { GenerateRequest, ManualLieInput, PersonSummary, SavedLie, Variant } from '../../../shared/schema.ts';
+import type {
+  GenerateRequest,
+  ManualLieInput,
+  PersonProfile,
+  PersonSummary,
+  SavedLie,
+  Variant,
+} from '../../../shared/schema.ts';
 import type { Status, TargetId } from '../../../shared/constants.ts';
 import { getDeviceId } from './deviceId.ts';
 import { aiReady, readAiConfig } from './aiConfig.ts';
@@ -37,7 +44,8 @@ export const api = {
     if (aiReady(ai)) {
       try {
         const history = body.person ? await api.history(body.person).catch(() => []) : [];
-        return { variants: await generateWithAi(body, ai, { history }), provider: 'ai' };
+        const profile = body.person ? await api.getPersonProfile(body.person).catch(() => null) : null;
+        return { variants: await generateWithAi(body, ai, { history, profile }), provider: 'ai' };
       } catch {
         /* sessizce şablona düş */
       }
@@ -78,6 +86,22 @@ export const api = {
 
   people(): Promise<{ people: PersonSummary[] }> {
     return call<{ people: PersonSummary[] }>('/api/lies/people');
+  },
+
+  async getPersonProfile(name: string): Promise<PersonProfile | null> {
+    try {
+      return await call<PersonProfile>(`/api/people/${encodeURIComponent(name)}`);
+    } catch {
+      return null;
+    }
+  },
+
+  savePersonProfile(profile: PersonProfile): Promise<{ ok: true }> {
+    const { name, ...rest } = profile;
+    return call<{ ok: true }>(`/api/people/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      body: JSON.stringify(rest),
+    });
   },
 
   byPerson(person: string): Promise<{ items: SavedLie[] }> {

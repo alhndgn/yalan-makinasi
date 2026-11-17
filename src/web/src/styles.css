@@ -395,3 +395,26 @@
 .dock-btn.save { width: 62px; height: 62px; background: var(--color-red); color: #fff; box-shadow: 0 10px 26px rgba(208,52,44,.35); }
 .dock-btn.save svg { width: 26px; height: 26px; }
 .detail-screen { padding-bottom: 96px; }
+
+.profile-editor { display: flex; flex-direction: column; }
+.profile-editor .field-label { margin-top: 18px; }
+.profile-editor .cta { margin-top: 22px; }
+.closeness-hint { margin: 6px 0 0; }
+.range { width: 100%; accent-color: var(--color-red); height: 34px; }
+
+/* kimin için öneri listesi */
+.who-wrap { position: relative; }
+.who-suggest { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30; list-style: none; margin: 0; padding: 6px; background: #fff; border: 1px solid var(--color-line); border-radius: 16px; box-shadow: 0 16px 40px rgba(20,19,18,.14); display: flex; flex-direction: column; gap: 2px; }
+.who-suggest-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; background: none; border-radius: 11px; cursor: pointer; font-family: inherit; text-align: left; }
+.who-suggest-item:hover { background: var(--color-red-soft); }
+.who-avatar { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 50%; background: var(--color-red-soft); color: var(--color-red); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+.who-info { display: flex; flex-direction: column; min-width: 0; }
+.who-name { font-size: 13.5px; font-weight: 650; color: var(--color-ink); }
+.who-meta { font-size: 11px; color: var(--color-muted); }
+.hint-card .optional { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--color-faint); font-size: 10.5px; }
+.hint-input { margin-top: 0; }
+.chat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.chat-caption-right { color: var(--color-red); opacity: .9; }
+
+.edit-btn { border: 1px solid var(--color-line); background: #fff; color: var(--color-muted); border-radius: 999px; padding: 5px 11px; font-family: inherit; font-size: 11.5px; font-weight: 650; cursor: pointer; }
+.edit-btn:hover { border-color: var(--color-red-line); color: var(--color-red); }

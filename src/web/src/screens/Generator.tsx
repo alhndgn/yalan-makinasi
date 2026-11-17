@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
-import { CHANNELS, DEFAULT_FORM, STYLES } from '../../../shared/constants.ts';
+import { useEffect, useMemo, useState } from 'react';
+import { CHANNELS, DEFAULT_FORM, HINT_MAX, STYLES } from '../../../shared/constants.ts';
 import type { GenerateRequest, PersonSummary, Variant } from '../../../shared/schema.ts';
 import { GeneratingScreen } from '../components/GeneratingScreen.tsx';
-import { IntensityGauge } from '../components/IntensityGauge.tsx';
 import { VariantDeck } from '../components/VariantDeck.tsx';
 import { VariantDetail } from '../components/VariantDetail.tsx';
 import { YalanMark } from '../components/YalanMark.tsx';
@@ -14,7 +13,9 @@ import { repeatWarning } from '../lib/personView.ts';
 type Props = { onGenerated: (variants: Variant[]) => void };
 type View = 'form' | 'loading' | 'deck' | 'detail';
 
-/** Kimin için kutusunun altındaki dört hızlı seçenek. */
+/** Şiddet artık kullanıcıya sorulmuyor: orta-üstü sabit bir doz uygulanıyor. */
+export const FIXED_INTENSITY = 6;
+
 const QUICK_TARGETS = [
   { id: 'anne', label: 'Anne-baba' },
   { id: 'arkadas', label: 'Arkadaş' },
@@ -27,10 +28,11 @@ export function Generator({ onGenerated }: Props) {
   const [person, setPerson] = useState('');
   const [target, setTarget] = useState<GenerateRequest['target']>(DEFAULT_FORM.target);
   const [situationText, setSituationText] = useState('');
-  const [intensity, setIntensity] = useState(defaults.intensity ?? DEFAULT_FORM.intensity);
+  const [hint, setHint] = useState('');
   const [channel, setChannel] = useState<GenerateRequest['channel']>(DEFAULT_FORM.channel);
   const [style, setStyle] = useState<GenerateRequest['style']>(defaults.style ?? DEFAULT_FORM.style);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [people, setPeople] = useState<PersonSummary[]>([]);
   const [repeat, setRepeat] = useState<string | null>(null);
@@ -42,14 +44,19 @@ export function Generator({ onGenerated }: Props) {
   const [savedNote, setSavedNote] = useState<string | null>(null);
   const [provider, setProvider] = useState<string>('template');
 
+  async function refreshPeople() {
+    try {
+      const r = await data.people();
+      setPeople(Array.isArray(r?.people) ? r.people : []);
+    } catch {
+      setPeople([]);
+    }
+  }
+
   useEffect(() => {
-    data
-      .people()
-      .then((r) => setPeople(Array.isArray(r?.people) ? r.people : []))
-      .catch(() => setPeople([]));
+    void refreshPeople();
   }, []);
 
-  // Aynı kişiye daha önce ne söyledin?
   useEffect(() => {
     const name = person.trim();
     if (!name) {
@@ -65,18 +72,27 @@ export function Generator({ onGenerated }: Props) {
       .catch(() => setRepeat(null));
   }, [person]);
 
+  const suggestions = useMemo(() => {
+    const needle = person.trim().toLocaleLowerCase('tr');
+    if (!needle) return [];
+    return people
+      .filter((p) => p.person && p.person.toLocaleLowerCase('tr').includes(needle) && p.person !== person.trim())
+      .slice(0, 4);
+  }, [people, person]);
+
   async function generate() {
     setError(null);
     setSavedNote(null);
     setView('loading');
     const request: GenerateRequest = {
       person: person.trim(),
+      hint: hint.trim() || undefined,
       target,
       situation: 'ozel',
       situationCustom: situationText.trim().slice(0, 180),
       channel,
       style,
-      intensity,
+      intensity: FIXED_INTENSITY,
     };
     try {
       const result = await data.generate({ ...request, salt: String(Date.now()) });
@@ -114,7 +130,7 @@ export function Generator({ onGenerated }: Props) {
           situationCustom: situationText.trim().slice(0, 180),
           channel,
           style,
-          intensity,
+          intensity: FIXED_INTENSITY,
         },
         provider,
       });
@@ -174,20 +190,52 @@ export function Generator({ onGenerated }: Props) {
         <label className="field-label" htmlFor="who">
           Kimin için?
         </label>
-        <input
-          id="who"
-          className="input who-input"
-          list="ym-people"
-          placeholder="İsim yaz — ör. Ayşe, patron Mehmet"
-          maxLength={40}
-          value={person}
-          onChange={(e) => setPerson(e.target.value)}
-        />
-        <datalist id="ym-people">
-          {people.map((p) => (
-            <option key={p.person} value={p.person} />
-          ))}
-        </datalist>
+        <div className="who-wrap">
+          <input
+            id="who"
+            className="input who-input"
+            placeholder="İsim yaz — ör. Ayşe, patron Mehmet"
+            maxLength={40}
+            autoComplete="off"
+            value={person}
+            onChange={(e) => {
+              setPerson(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => {
+              setShowSuggestions(true);
+              void refreshPeople();
+            }}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <ul className="who-suggest" role="listbox" aria-label="Kayıtlı kişiler">
+              {suggestions.map((p) => (
+                <li key={p.person}>
+                  <button
+                    type="button"
+                    className="who-suggest-item"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setPerson(p.person);
+                      if (p.relation) setTarget(p.relation);
+                      setShowSuggestions(false);
+                    }}
+                  >
+                    <span className="who-avatar">{(p.person[0] ?? '?').toLocaleUpperCase('tr')}</span>
+                    <span className="who-info">
+                      <span className="who-name">{p.person}</span>
+                      <span className="who-meta">
+                        {p.count} kayıt
+                        {p.closeness ? ` · samimiyet ${p.closeness}/10` : ''}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <div className="chips who-chips">
           {QUICK_TARGETS.map((item) => (
@@ -222,8 +270,18 @@ export function Generator({ onGenerated }: Props) {
         <p className="char-hint">{situationText.trim().length}/180</p>
       </div>
 
-      <div className="card form-card gauge-card">
-        <IntensityGauge value={intensity} onChange={setIntensity} />
+      <div className="card form-card hint-card">
+        <label className="field-label" htmlFor="hint">
+          Nasıl bir yalan olsun? <span className="optional">opsiyonel</span>
+        </label>
+        <input
+          id="hint"
+          className="input hint-input"
+          placeholder="ör. ailevi bir mazeret olsun, biraz duygusal"
+          maxLength={HINT_MAX}
+          value={hint}
+          onChange={(e) => setHint(e.target.value)}
+        />
       </div>
 
       {showAdvanced && (

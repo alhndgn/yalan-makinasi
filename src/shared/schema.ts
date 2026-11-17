@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   CHANNELS,
   CUSTOM_SITUATION_MAX,
+  HINT_MAX,
   LIE_SOURCES,
   PERSON_MAX,
   INTENSITY_MAX,
@@ -29,8 +30,30 @@ const personSchema = z
   .transform((s) => s.replace(/\s+/g, ' '))
   .optional();
 
+export const GENDERS = ['kadin', 'erkek', 'belirsiz'] as const;
+export type Gender = (typeof GENDERS)[number];
+
+/** Defterde kişi başına tutulan profil: yapay zekâ hitap ve üslubu buna göre seçer. */
+export const personProfileSchema = z.object({
+  name: z.string().trim().min(1).max(PERSON_MAX),
+  relation: targetSchema.default('arkadas'),
+  gender: z.enum(GENDERS).default('belirsiz'),
+  /** Aramızdaki samimiyet: 1 resmî — 10 çok samimi. */
+  closeness: z.coerce.number().int().min(1).max(10).default(5),
+  /** Serbest notlar: mesleği, neleri kontrol edebileceği, dikkat edilecekler. */
+  notes: z.string().trim().max(300).default(''),
+});
+
+export type PersonProfile = z.infer<typeof personProfileSchema>;
+
 export const generateRequestSchema = z.object({
   person: personSchema,
+  /** "Nasıl bir yalan olsun?" — opsiyonel yönlendirme (ör. "ailevi bir mazeret olsun"). */
+  hint: z
+    .string()
+    .trim()
+    .transform((s) => s.slice(0, HINT_MAX))
+    .optional(),
   target: targetSchema,
   situation: situationSchema,
   situationCustom: z
@@ -98,6 +121,10 @@ export type PersonSummary = {
   pending: number;
   conflicts: number;
   targets: string[];
+  relation?: PersonProfile['relation'];
+  gender?: PersonProfile['gender'];
+  closeness?: number;
+  notes?: string;
 };
 
 export type ManualLieInput = {

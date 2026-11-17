@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { buildAnswerPrompt, buildSystemPrompt, type HistoryEntry } from '../../../engine/prompt.ts';
-import { variantSchema, type GenerateRequest, type Variant } from '../../../shared/schema.ts';
+import { variantSchema, type GenerateRequest, type PersonProfile, type Variant } from '../../../shared/schema.ts';
 import { getDeviceId } from './deviceId.ts';
 import type { AiConfig } from './aiConfig.ts';
 import { endpointFor, isNativeApp, postJson, sessionId } from './aiTransport.ts';
@@ -44,7 +44,7 @@ async function ask(cfg: AiConfig, payload: Record<string, unknown>, timeoutMs: n
 export async function generateWithAi(
   req: GenerateRequest,
   cfg: AiConfig,
-  opts: { history?: HistoryEntry[] } = {},
+  opts: { history?: HistoryEntry[]; profile?: PersonProfile | null } = {},
   timeoutMs = 60000,
 ): Promise<Variant[]> {
   const base = {
@@ -54,11 +54,20 @@ export async function generateWithAi(
     thinking: { type: 'disabled' },
     reasoning_effort: 'minimal',
     messages: [
-      { role: 'system', content: buildSystemPrompt(req.intensity, { person: req.person, history: opts.history }) },
+      {
+        role: 'system',
+        content: buildSystemPrompt(req.intensity, {
+          person: req.person,
+          history: opts.history,
+          profile: opts.profile ?? undefined,
+          hint: req.hint,
+        }),
+      },
       {
         role: 'user',
         content: JSON.stringify({
           person: req.person ?? null,
+          hint: req.hint ?? null,
           target: req.target,
           situation: req.situation,
           situationCustom: req.situationCustom ?? null,

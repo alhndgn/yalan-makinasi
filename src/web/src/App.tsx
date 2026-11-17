@@ -43,15 +43,10 @@ function initialTab(): Tab {
 
 export function App() {
   const [tab, setTab] = useState<Tab>(initialTab);
-  const [aiMode, setAiMode] = useState<AiMode>('off');
+  void 0;
   const [showSplash, setShowSplash] = useState(() => splashHoldRequested() || (!splashSkipped() && !splashAlreadySeen()));
 
-  useEffect(() => {
-    fetch('/api/health')
-      .then((r) => r.json())
-      .then((data: { aiMode?: AiMode }) => setAiMode(data.aiMode ?? 'off'))
-      .catch(() => setAiMode('off'));
-  }, []);
+
 
   return (
     <main className="shell">
@@ -74,9 +69,14 @@ export function App() {
         />
       )}
 
-      {tab === 'defter' && <Ledger />}
-      {tab === 'uret' && <Generator onGenerated={() => {}} />}
-      {tab === 'ayarlar' && <Settings aiMode={aiMode} onBack={() => setTab('uret')} />}
+      {/* Sekmeler açık kalır: üretim sürerken deftere bakabilir, dönünce sonucu bulabilirsin. */}
+      <div hidden={tab !== 'defter'}>
+        <Ledger />
+      </div>
+      <div hidden={tab !== 'uret'}>
+        <Generator onGenerated={() => {}} />
+      </div>
+      {tab === 'ayarlar' && <Settings onBack={() => setTab('uret')} />}
 
       <nav className="tabbar" aria-label="Bölümler">
         <button type="button" className={tab === 'defter' ? 'is-active' : ''} onClick={() => setTab('defter')}>

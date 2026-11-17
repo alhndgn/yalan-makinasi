@@ -1,5 +1,23 @@
 # Sürüm geçmişi
 
+## v0.7.0 — 18 Kasım 2026
+
+**Kişi profili + kişiye göre hitap, akış düzeltmeleri.**
+
+- **Kişi profili (Defter → kişi → Profil):** ilişki, cinsiyet, samimiyet (1-10), serbest notlar.
+  Yapay zekâ hitabı ve sen/siz tercihini bu profile göre yapıyor ("Ateş bey", "Ayşe abla", "aşkım"…).
+- **"Nasıl bir yalan olsun?"**: üretim ekranına opsiyonel yönlendirme alanı (ör. "ailevi bir mazeret olsun").
+- **Yalan şiddeti kaldırıldı:** doz sabit (6/10); ibre kullanıcıdan istenmiyor.
+- **Kimin için?** yazarken çirkin tarayıcı listesi yerine tasarımlı öneri kartları (avatar, kayıt sayısı, samimiyet).
+- **Deste düzenleme:** kalem yerine "✎ Düzenle" düğmesi, otomatik odak, metnin istenen kısmı değiştirilebiliyor.
+- **Detay:** balon etiketi artık kişinin adı ("Ayşe · neden gelmedin"), başlıklar "seçtiğin bahane" ve
+  "Karşı taraf ne sorar | Hazır Cevaplar".
+- **WhatsApp:** wa.me sayfası yerine cihazın paylaşım sayfası / `whatsapp://` — kişiyi seçip doğrudan gönderim
+  (`@capacitor/share` eklendi).
+- **Sekme durumu korunuyor:** üretim sürerken Defter'e geçilebiliyor; dönünce sonuç kaybolmuyor.
+- **Ayarlar:** "Şablon motoru / yapay zekâ" bölümü ve varsayılan şiddet alanı kaldırıldı.
+- Test sayısı 131 → 137 (profil promptu, profil uçları, öneri alanı, şiddetin sabitlenmesi).
+
 ## v0.6.0 — 17 Kasım 2026
 
 **Üretim ekranı tek ekrana indi, akış sadeleşti.**

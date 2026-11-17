@@ -34,7 +34,15 @@ export function createOpenAiCompatProvider(cfg: OpenAiCompatConfig): LlmProvider
             temperature: 0.9,
             response_format: { type: 'json_object' },
             messages: [
-              { role: 'system', content: buildSystemPrompt(req.intensity, { person: req.person, history: ctx.history }) },
+              {
+                role: 'system',
+                content: buildSystemPrompt(req.intensity, {
+                  person: req.person,
+                  history: ctx.history,
+                  profile: ctx.profile ?? undefined,
+                  hint: ctx.hint ?? req.hint,
+                }),
+              },
               {
                 role: 'user',
                 content: JSON.stringify({

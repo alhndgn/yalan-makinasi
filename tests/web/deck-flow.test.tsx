@@ -87,15 +87,15 @@ describe('üretim akışı: yüklenme → deste → tam ekran', () => {
     const detail = await screen.findByTestId('detail');
     expect(detail).toHaveTextContent('İkinci metin.');
 
-    // soru ve cevap ayrı balonlarda, kimin yazdığı belli
+    // soru ve cevap ayrı balonlarda; soruyu soran kişinin adı görünür
     const chat = screen.getByTestId('chat');
-    expect(chat).toHaveTextContent('karşı taraf');
+    expect(chat).toHaveTextContent('Ayşe');
     expect(chat).toHaveTextContent('sen');
     expect(chat).toHaveTextContent('Neredeydin?');
     expect(chat).toHaveTextContent('Annemde.');
 
-    // yuvarlak eylemler: whatsapp, instagram, kaydet, yenile, kopyala
-    expect(screen.getByRole('link', { name: /whatsapp/i })).toBeInTheDocument();
+    // yuvarlak eylemler: whatsapp, paylaş, kaydet, yenile, kopyala
+    expect(screen.getByRole('button', { name: /whatsapp/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /diğer uygulamalarda paylaş/i })).toBeInTheDocument();
     expect(screen.getByTestId('dock-save')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^yenile$/i })).toBeInTheDocument();
