@@ -1,8 +1,12 @@
 import type { LieSource } from '../../../shared/constants.ts';
+import type { Lang } from './i18n.ts';
+import { translate } from './i18n.ts';
+
+type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 /** Kaydın kaynağını insan diline çevirir. */
-export function sourceLabel(source: LieSource | undefined): string {
-  return source === 'manual' ? 'kendi yazdığın' : 'yapay zekâ önerisi';
+export function sourceLabel(source: LieSource | undefined, t: Translate): string {
+  return source === 'manual' ? t('ledger.sourceManual') : t('ledger.sourceAi');
 }
 
 /**
@@ -12,24 +16,35 @@ export function sourceLabel(source: LieSource | undefined): string {
 export function repeatWarning(
   history: { situation: string; createdAt: number }[],
   situation: string,
-  days = 30,
+  options: { person?: string; days?: number; t: Translate },
 ): string | null {
+  const days = options.days ?? 30;
   const since = Date.now() - days * 24 * 60 * 60 * 1000;
   const recent = history.filter((item) => item.createdAt >= since);
   if (recent.length === 0) return null;
 
   const same = recent.filter((item) => item.situation === situation);
-  const label = situation.replaceAll('_', ' ');
+  const person = (options.person ?? '').trim();
 
   if (same.length > 0) {
-    return `Bu kişiye son ${days} günde ${same.length} kez "${label}" dedin. Aynı bahaneyi tekrar kullanmak riski artırır.`;
+    return options.t('gen.repeatSame', {
+      person,
+      days,
+      count: same.length,
+      situation: situation.replaceAll('_', ' '),
+    });
   }
 
-  return `Bu kişiye son ${days} günde ${recent.length} kayıt var. Yeni metin eskilerle çelişmesin; ayrıntıları (yer, saat, tanık) tekrar etme.`;
+  return options.t('gen.repeatAny', { person, days, count: recent.length });
 }
 
 /** Kişi avatarı için baş harf. */
 export function initialOf(person: string): string {
   const trimmed = person.trim();
   return trimmed ? trimmed[0]!.toLocaleUpperCase('tr') : '?';
+}
+
+/** Testler ve dil dışı çağrılar için: verilen dille çeviri. */
+export function warnInLang(lang: Lang, key: string, params: Record<string, string | number>): string {
+  return translate(lang, key, params);
 }

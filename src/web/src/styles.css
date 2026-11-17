@@ -418,3 +418,16 @@
 
 .edit-btn { border: 1px solid var(--color-line); background: #fff; color: var(--color-muted); border-radius: 999px; padding: 5px 11px; font-family: inherit; font-size: 11.5px; font-weight: 650; cursor: pointer; }
 .edit-btn:hover { border-color: var(--color-red-line); color: var(--color-red); }
+
+/* ---------- dil seçimi ---------- */
+.lang-screen { min-height: calc(100vh - 40px); display: flex; flex-direction: column; justify-content: center; gap: 26px; padding: 20px 0 40px; }
+.lang-head { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.lang-title { font-size: 26px; font-weight: 750; letter-spacing: -.02em; margin: 0; }
+.lang-head .muted { font-size: 13.5px; line-height: 1.55; }
+.lang-options { display: flex; flex-direction: column; gap: 12px; }
+.lang-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 18px 18px; border: 1px solid var(--color-line); border-radius: 20px; background: #fff; cursor: pointer; font-family: inherit; text-align: left; transition: border-color 120ms, box-shadow 120ms, transform 120ms; }
+.lang-card:hover { border-color: var(--color-red-line); box-shadow: 0 14px 34px rgba(208,52,44,.10); transform: translateY(-1px); }
+.lang-flag { font-size: 10.5px; letter-spacing: .14em; font-weight: 800; color: var(--color-red); background: var(--color-red-soft); padding: 3px 9px; border-radius: 99px; }
+.lang-name { font-size: 19px; font-weight: 700; color: var(--color-ink); }
+.lang-desc { font-size: 12.5px; color: var(--color-muted); }
+.lang-hint { text-align: center; font-size: 11.5px; color: var(--color-faint); margin: 0; }

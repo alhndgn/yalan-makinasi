@@ -63,6 +63,8 @@ export const generateRequestSchema = z.object({
     .optional(),
   channel: channelSchema,
   style: styleSchema,
+  /** Çıktı dili: arayüz diliyle aynı (verilmezse Türkçe). */
+  lang: z.enum(['tr', 'en']).optional(),
   intensity: z.preprocess(
     (value) => (typeof value === 'boolean' ? Number.NaN : value),
     z.coerce.number().int().min(INTENSITY_MIN).max(INTENSITY_MAX),

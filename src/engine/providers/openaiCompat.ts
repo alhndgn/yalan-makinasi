@@ -41,6 +41,7 @@ export function createOpenAiCompatProvider(cfg: OpenAiCompatConfig): LlmProvider
                   history: ctx.history,
                   profile: ctx.profile ?? undefined,
                   hint: ctx.hint ?? req.hint,
+                  lang: req.lang ?? 'tr',
                 }),
               },
               {

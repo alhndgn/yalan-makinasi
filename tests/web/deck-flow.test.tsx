@@ -109,7 +109,7 @@ describe('üretim akışı: yüklenme → deste → tam ekran', () => {
     await screen.findByTestId('detail');
     await userEvent.click(screen.getByTestId('dock-save'));
 
-    expect(await screen.findByText(/defter'e kaydedildi/i)).toBeInTheDocument();
+    expect(await screen.findByText(/deftere eklendi/i)).toBeInTheDocument();
   });
 
   it('yenile yeni üretim isteği atar', async () => {

@@ -8,6 +8,7 @@ import { YalanMark } from '../components/YalanMark.tsx';
 import { ApiError } from '../lib/api.ts';
 import { data } from '../lib/data.ts';
 import { readDefaults } from '../lib/defaults.ts';
+import { useI18n } from '../lib/lang.tsx';
 import { repeatWarning } from '../lib/personView.ts';
 
 type Props = { onGenerated: (variants: Variant[]) => void };
@@ -16,14 +17,10 @@ type View = 'form' | 'loading' | 'deck' | 'detail';
 /** Şiddet artık kullanıcıya sorulmuyor: orta-üstü sabit bir doz uygulanıyor. */
 export const FIXED_INTENSITY = 6;
 
-const QUICK_TARGETS = [
-  { id: 'anne', label: 'Anne-baba' },
-  { id: 'arkadas', label: 'Arkadaş' },
-  { id: 'patron', label: 'Patron' },
-  { id: 'sevgili', label: 'Sevgili' },
-] as const;
+const QUICK_TARGETS = ['anne', 'arkadas', 'patron', 'sevgili'] as const;
 
 export function Generator({ onGenerated }: Props) {
+  const { t, lang, label } = useI18n();
   const defaults = readDefaults();
   const [person, setPerson] = useState('');
   const [target, setTarget] = useState<GenerateRequest['target']>(DEFAULT_FORM.target);
@@ -67,10 +64,10 @@ export function Generator({ onGenerated }: Props) {
       .byPerson(name)
       .then((r) => {
         const history = (r.items ?? []).map((i) => ({ situation: i.situation, createdAt: i.createdAt }));
-        setRepeat(repeatWarning(history, 'ozel'));
+        setRepeat(repeatWarning(history, 'ozel', { person: name, t }));
       })
       .catch(() => setRepeat(null));
-  }, [person]);
+  }, [person, t]);
 
   const suggestions = useMemo(() => {
     const needle = person.trim().toLocaleLowerCase('tr');
@@ -93,6 +90,7 @@ export function Generator({ onGenerated }: Props) {
       channel,
       style,
       intensity: FIXED_INTENSITY,
+      lang,
     };
     try {
       const result = await data.generate({ ...request, salt: String(Date.now()) });
@@ -104,13 +102,7 @@ export function Generator({ onGenerated }: Props) {
       onGenerated(result.variants);
     } catch (err) {
       const code = err instanceof ApiError ? err.code : 'UNKNOWN';
-      setError(
-        code === 'RATE_LIMITED'
-          ? 'Biraz bekle, çok hızlı üretiyorsun.'
-          : code === 'ABUSE_BLOCKED'
-            ? 'Bu tür bir metin üretemem (belge, rapor, resmî kayıt).'
-            : 'Bir şeyler ters gitti, tekrar dene.',
-      );
+      setError(code === 'RATE_LIMITED' ? t('gen.errRate') : code === 'ABUSE_BLOCKED' ? t('gen.errAbuse') : t('gen.errGeneric'));
       setView('form');
     }
   }
@@ -131,13 +123,14 @@ export function Generator({ onGenerated }: Props) {
           channel,
           style,
           intensity: FIXED_INTENSITY,
+          lang,
         },
         provider,
       });
-      setSavedNote("Defter'e kaydedildi.");
+      setSavedNote(t('ledger.added'));
       setTimeout(() => setSavedNote(null), 2200);
     } catch {
-      setSavedNote('Kaydedilemedi, tekrar dene.');
+      setSavedNote(t('ledger.saveFailed'));
     }
   }
 
@@ -150,7 +143,7 @@ export function Generator({ onGenerated }: Props) {
       <VariantDeck
         variants={variants}
         index={index}
-        contextLabel={usedPerson || 'karşı taraf'}
+        contextLabel={usedPerson || t('detail.them')}
         onIndex={setIndex}
         onEdit={editVariant}
         onUse={() => setView('detail')}
@@ -179,22 +172,22 @@ export function Generator({ onGenerated }: Props) {
       <header className="brandbar">
         <div className="brand">
           <YalanMark size={20} color="#D0342C" needle="#141312" />
-          <span>Yalan Makinası</span>
+          <span>{t('gen.brand')}</span>
         </div>
         <button type="button" className="ghost" onClick={() => setShowAdvanced((v) => !v)} aria-expanded={showAdvanced}>
-          Ton · Kanal {showAdvanced ? '▴' : '▾'}
+          {t('gen.tone')} {showAdvanced ? '▴' : '▾'}
         </button>
       </header>
 
       <div className="card form-card">
         <label className="field-label" htmlFor="who">
-          Kimin için?
+          {t('gen.who')}
         </label>
         <div className="who-wrap">
           <input
             id="who"
             className="input who-input"
-            placeholder="İsim yaz — ör. Ayşe, patron Mehmet"
+            placeholder={t('gen.whoPlaceholder')}
             maxLength={40}
             autoComplete="off"
             value={person}
@@ -209,7 +202,7 @@ export function Generator({ onGenerated }: Props) {
             onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
           />
           {showSuggestions && suggestions.length > 0 && (
-            <ul className="who-suggest" role="listbox" aria-label="Kayıtlı kişiler">
+            <ul className="who-suggest" role="listbox" aria-label={t('gen.whoAria')}>
               {suggestions.map((p) => (
                 <li key={p.person}>
                   <button
@@ -226,8 +219,8 @@ export function Generator({ onGenerated }: Props) {
                     <span className="who-info">
                       <span className="who-name">{p.person}</span>
                       <span className="who-meta">
-                        {p.count} kayıt
-                        {p.closeness ? ` · samimiyet ${p.closeness}/10` : ''}
+                        {p.count} {t('gen.records')}
+                        {p.closeness ? ` · ${t('gen.closeness')} ${p.closeness}/10` : ''}
                       </span>
                     </span>
                   </button>
@@ -238,15 +231,15 @@ export function Generator({ onGenerated }: Props) {
         </div>
 
         <div className="chips who-chips">
-          {QUICK_TARGETS.map((item) => (
+          {QUICK_TARGETS.map((id) => (
             <button
-              key={item.id}
+              key={id}
               type="button"
-              className={`chip ${target === item.id ? 'is-active' : ''}`}
-              aria-pressed={target === item.id}
-              onClick={() => setTarget(item.id as GenerateRequest['target'])}
+              className={`chip ${target === id ? 'is-active' : ''}`}
+              aria-pressed={target === id}
+              onClick={() => setTarget(id as GenerateRequest['target'])}
             >
-              {item.label}
+              {label('target', id)}
             </button>
           ))}
         </div>
@@ -256,12 +249,12 @@ export function Generator({ onGenerated }: Props) {
 
       <div className="card form-card">
         <label className="field-label" htmlFor="what">
-          Ne oldu?
+          {t('gen.what')}
         </label>
         <textarea
           id="what"
           className="input what-input"
-          placeholder="Kendi cümlelerinle yaz: dün akşam iş çıktı, gelemedim…"
+          placeholder={t('gen.whatPlaceholder')}
           maxLength={180}
           rows={3}
           value={situationText}
@@ -272,12 +265,12 @@ export function Generator({ onGenerated }: Props) {
 
       <div className="card form-card hint-card">
         <label className="field-label" htmlFor="hint">
-          Nasıl bir yalan olsun? <span className="optional">opsiyonel</span>
+          {t('gen.hint')} <span className="optional">{t('gen.hintOptional')}</span>
         </label>
         <input
           id="hint"
           className="input hint-input"
-          placeholder="ör. ailevi bir mazeret olsun, biraz duygusal"
+          placeholder={t('gen.hintPlaceholder')}
           maxLength={HINT_MAX}
           value={hint}
           onChange={(e) => setHint(e.target.value)}
@@ -286,19 +279,19 @@ export function Generator({ onGenerated }: Props) {
 
       {showAdvanced && (
         <div className="card form-card advanced-card">
-          <p className="field-label">Kanal</p>
+          <p className="field-label">{t('gen.channel')}</p>
           <div className="seg">
             {CHANNELS.map((c) => (
               <button key={c.id} type="button" className={channel === c.id ? 'is-active' : ''} onClick={() => setChannel(c.id)}>
-                {c.label}
+                {label('channel', c.id)}
               </button>
             ))}
           </div>
-          <p className="field-label">Ton</p>
+          <p className="field-label">{t('gen.style')}</p>
           <div className="seg">
             {STYLES.map((s) => (
               <button key={s.id} type="button" className={style === s.id ? 'is-active' : ''} onClick={() => setStyle(s.id)}>
-                {s.label}
+                {label('style', s.id)}
               </button>
             ))}
           </div>
@@ -312,7 +305,7 @@ export function Generator({ onGenerated }: Props) {
       )}
 
       <button className="cta gen-cta" type="button" onClick={() => void generate()} disabled={!ready}>
-        Üret <small>3 alternatif</small>
+        {t('gen.cta')} <small>{t('gen.ctaCount')}</small>
       </button>
     </section>
   );

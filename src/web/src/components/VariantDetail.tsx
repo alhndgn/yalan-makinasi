@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Variant } from '../../../shared/schema.ts';
+import { useI18n } from '../lib/lang.tsx';
 import { shareElsewhere, shareToWhatsApp } from '../lib/share.ts';
 
 type Props = {
@@ -13,48 +14,40 @@ type Props = {
   note?: string | null;
 };
 
-const RISK_LABEL: Record<Variant['riskLevel'], string> = { dusuk: 'düşük', orta: 'orta', yuksek: 'yüksek' };
-const STRATEGY_LABEL: Record<Variant['strategy'], string> = { sade: 'Sade', detayli: 'Detaylı', duygusal: 'Duygusal' };
-
-/** Balonda kimin yazdığını gösteren etiket: kişi adı varsa adı, yoksa "karşı taraf". */
-function whoLabel(person: string): string {
-  const clean = person.trim();
-  return clean || 'karşı taraf';
-}
-
 /** Seçilen yalanın tam ekran hâli: WhatsApp konuşması gibi soru-cevap + yuvarlak eylemler. */
 export function VariantDetail({ variant, index, total, personLabel, onSave, onRegenerate, onBack, note }: Props) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState<string | null>(null);
-  void 0;
+  const themLabel = personLabel.trim() || t('detail.them');
 
   async function copyText(text: string) {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied('Kopyalandı');
+      setCopied(t('detail.copied'));
       setTimeout(() => setCopied(null), 1600);
     } catch {
-      setCopied('Kopyalanamadı');
+      setCopied(t('detail.copyFailed'));
     }
   }
 
   return (
     <section className="screen detail-screen" data-testid="detail">
       <header className="detail-top">
-        <button type="button" className="round" onClick={onBack} aria-label="Kartlara dön">
+        <button type="button" className="round" onClick={onBack} aria-label={t('detail.back')}>
           ‹
         </button>
-        <span className="detail-title">{personLabel || 'Karşı taraf'}</span>
+        <span className="detail-title">{personLabel || t('detail.them')}</span>
         <span className="spacer" />
         <span className="small faint">
-          {STRATEGY_LABEL[variant.strategy]} · {index + 1}/{total}
+          {t(`strategy.${variant.strategy}`)} · {index + 1}/{total}
         </span>
       </header>
 
       <div className="picked">
         <div className="picked-head">
-          <span className="kicker">seçtiğin bahane</span>
+          <span className="kicker">{t('detail.picked')}</span>
           <span className={`risk risk-${variant.riskLevel}`}>
-            risk {RISK_LABEL[variant.riskLevel]} · {variant.riskScore}
+            {t('detail.risk')} {t(`risk.${variant.riskLevel}`)} · {variant.riskScore}
           </span>
         </div>
         <p className="picked-text" data-testid="detail-text">
@@ -64,18 +57,18 @@ export function VariantDetail({ variant, index, total, personLabel, onSave, onRe
 
       <div className="chat" data-testid="chat">
         <div className="chat-head">
-          <span className="chat-caption">Karşı taraf ne sorar</span>
-          <span className="chat-caption chat-caption-right">Hazır Cevaplar</span>
+          <span className="chat-caption">{t('detail.questions')}</span>
+          <span className="chat-caption chat-caption-right">{t('detail.answers')}</span>
         </div>
-        {variant.queries.length === 0 && <p className="small muted">Bu metin için soru provası yok.</p>}
+        {variant.queries.length === 0 && <p className="small muted">—</p>}
         {variant.queries.map((qa, i) => (
           <div key={`${qa.q}-${i}`} className="bubble-row">
             <div className="bubble in">
-              <span className="bubble-who">{whoLabel(personLabel)}</span>
+              <span className="bubble-who">{themLabel}</span>
               {qa.q}
             </div>
             <div className="bubble out">
-              <span className="bubble-who">sen</span>
+              <span className="bubble-who">{t('detail.you')}</span>
               {qa.a}
             </div>
           </div>
@@ -97,7 +90,7 @@ export function VariantDetail({ variant, index, total, personLabel, onSave, onRe
         <button
           type="button"
           className="dock-btn wa"
-          aria-label="WhatsApp'ta paylaş"
+          aria-label={t('detail.wa')}
           onClick={() => void shareToWhatsApp(variant.text)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -108,7 +101,7 @@ export function VariantDetail({ variant, index, total, personLabel, onSave, onRe
         <button
           type="button"
           className="dock-btn ig"
-          aria-label="Diğer uygulamalarda paylaş"
+          aria-label={t('detail.share')}
           onClick={() => void shareElsewhere(variant.text)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -118,14 +111,14 @@ export function VariantDetail({ variant, index, total, personLabel, onSave, onRe
           </svg>
         </button>
 
-        <button type="button" className="dock-btn save" onClick={onSave} aria-label="Deftere kaydet" data-testid="dock-save">
+        <button type="button" className="dock-btn save" onClick={onSave} aria-label={t('detail.save')} data-testid="dock-save">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 3.5h9.2L19.5 8v12.5H6z" fill="none" strokeWidth="1.9" />
             <path d="M9 3.5v5h6v-5" fill="none" strokeWidth="1.6" />
           </svg>
         </button>
 
-        <button type="button" className="dock-btn refresh" onClick={onRegenerate} aria-label="Yenile">
+        <button type="button" className="dock-btn refresh" onClick={onRegenerate} aria-label={t('detail.refresh')}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M20 12a8 8 0 1 1-2.8-6.1" fill="none" strokeWidth="1.9" />
             <path d="M20 4.5V10h-5.2" fill="none" strokeWidth="1.9" />
@@ -135,7 +128,7 @@ export function VariantDetail({ variant, index, total, personLabel, onSave, onRe
         <button
           type="button"
           className="dock-btn copy"
-          aria-label="Metni kopyala"
+          aria-label={t('detail.copy')}
           onClick={() => void copyText(variant.text)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">

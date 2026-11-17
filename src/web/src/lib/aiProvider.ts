@@ -61,6 +61,7 @@ export async function generateWithAi(
           history: opts.history,
           profile: opts.profile ?? undefined,
           hint: req.hint,
+          lang: req.lang ?? 'tr',
         }),
       },
       {
@@ -93,7 +94,7 @@ export async function generateWithAi(
 
 /** "Ne diyeyim?" — kayıtlı bir yalanın ardından gelen soruya cevap. */
 export async function answerWithAi(
-  input: { lieText: string; question: string; person?: string },
+  input: { lieText: string; question: string; person?: string; lang?: 'tr' | 'en' },
   cfg: AiConfig,
   timeoutMs = 30000,
 ): Promise<string> {

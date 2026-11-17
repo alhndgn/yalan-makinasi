@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Variant } from '../../../shared/schema.ts';
+import { useI18n } from '../lib/lang.tsx';
 import { Typewriter } from './Typewriter.tsx';
 
 type Props = {
@@ -12,8 +13,6 @@ type Props = {
   onEdit: (nextText: string) => void;
 };
 
-const RISK_LABEL: Record<Variant['riskLevel'], string> = { dusuk: 'düşük', orta: 'orta', yuksek: 'yüksek' };
-const STRATEGY_LABEL: Record<Variant['strategy'], string> = { sade: 'Sade', detayli: 'Detaylı', duygusal: 'Duygusal' };
 const TUTORIAL_KEY = 'ym_deck_tutorial_seen';
 
 function tutorialSeen(): boolean {
@@ -26,6 +25,7 @@ function tutorialSeen(): boolean {
 
 /** Üç alternatifi tek tek gezdirir: oklar, noktalar, parmakla kaydırma, düzenleme. */
 export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onBack, onEdit }: Props) {
+  const { t } = useI18n();
   const [dx, setDx] = useState(0);
   const [showTutorial, setShowTutorial] = useState(() => !tutorialSeen());
   const [editing, setEditing] = useState(false);
@@ -67,7 +67,7 @@ export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onB
   return (
     <section className="screen deck-screen" data-testid="deck">
       <div className="deck-top">
-        <span className="kicker">3 alternatif</span>
+        <span className="kicker">{t('deck.kicker')}</span>
         <span className="deck-context">{contextLabel}</span>
       </div>
 
@@ -86,22 +86,22 @@ export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onB
         onTouchEnd={touchEnd}
       >
         <div className="deck-meta">
-          <span className="tag">{STRATEGY_LABEL[variant.strategy]}</span>
+          <span className="tag">{t(`strategy.${variant.strategy}`)}</span>
           <span className={`risk risk-${variant.riskLevel}`}>
-            {RISK_LABEL[variant.riskLevel]} · {variant.riskScore}
+            {t(`risk.${variant.riskLevel}`)} · {variant.riskScore}
           </span>
           <span className="spacer" />
           {!editing && (
             <button
               type="button"
               className="edit-btn"
-              aria-label="Yalanı düzenle"
+              aria-label={t('deck.editAria')}
               onClick={() => {
                 setDraft(variant.text);
                 setEditing(true);
               }}
             >
-              ✎ Düzenle
+              ✎ {t('deck.edit')}
             </button>
           )}
         </div>
@@ -115,12 +115,12 @@ export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onB
               maxLength={1000}
               autoFocus
               onChange={(e) => setDraft(e.target.value)}
-              aria-label="Yalan metni"
+              aria-label={t('deck.editLabel')}
             />
-            <p className="small faint">İstediğin kısmını değiştir — gerisi olduğu gibi kalır.</p>
+            <p className="small faint">{t('deck.editHint')}</p>
             <div className="deck-edit-actions">
               <button type="button" className="ghost" onClick={() => setEditing(false)}>
-                Vazgeç
+                {t('deck.cancel')}
               </button>
               <button
                 type="button"
@@ -131,7 +131,7 @@ export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onB
                 }}
                 disabled={draft.trim().length < 3}
               >
-                Kaydet
+                {t('deck.save')}
               </button>
             </div>
           </div>
@@ -144,7 +144,7 @@ export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onB
         {!editing && (
           <div className="deck-foot">
             <span className="small muted">
-              {variant.queries.length > 0 ? `karşı taraf ${variant.queries.length} soru sorabilir` : 'soru provası yok'}
+              {variant.queries.length > 0 ? t('deck.queries', { count: variant.queries.length }) : t('deck.noQueries')}
             </span>
             <span className="mono small faint">
               {index + 1}/{variants.length}
@@ -154,38 +154,38 @@ export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onB
       </article>
 
       <div className="deck-nav">
-        <button type="button" className="round" onClick={() => go(-1)} disabled={index === 0} aria-label="Önceki alternatif">
+        <button type="button" className="round" onClick={() => go(-1)} disabled={index === 0} aria-label={t('deck.prev')}>
           ‹
         </button>
         <button type="button" className="cta deck-use" onClick={onUse} disabled={editing}>
-          Bunu kullan
+          {t('deck.use')}
         </button>
         <button
           type="button"
           className="round"
           onClick={() => go(1)}
           disabled={index === variants.length - 1}
-          aria-label="Sonraki alternatif"
+          aria-label={t('deck.next')}
         >
           ›
         </button>
       </div>
 
       <button type="button" className="ghost deck-back" onClick={onBack}>
-        ‹ Formu değiştir
+        {t('deck.back')}
       </button>
 
       {showTutorial && (
-        <div className="tutorial" role="dialog" aria-label="Nasıl kaydırılır" data-testid="deck-tutorial">
+        <div className="tutorial" role="dialog" aria-label={t('deck.tutorialTitle')} data-testid="deck-tutorial">
           <div className="tutorial-card">
             <div className="tutorial-hand" aria-hidden="true">
               <span>👆</span>
               <i className="tutorial-arrow">→</i>
             </div>
-            <h3>Sağa kaydır</h3>
-            <p>Üç yalan hazırladık. Parmağını sağa kaydırıp diğerlerini görebilirsin — beğenmediğini kalemle düzenle.</p>
+            <h3>{t('deck.tutorialTitle')}</h3>
+            <p>{t('deck.tutorialBody')}</p>
             <button type="button" className="cta" onClick={closeTutorial}>
-              Anladım
+              {t('deck.tutorialOk')}
             </button>
           </div>
         </div>

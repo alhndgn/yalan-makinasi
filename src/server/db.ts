@@ -265,6 +265,24 @@ export type StoredPersonProfile = {
   notes: string;
 };
 
+/** AI bağlamına verilen profil: şema tipine uygun hâli. */
+export function toPromptProfile(profile: StoredPersonProfile | null): {
+  name: string;
+  relation: 'anne' | 'arkadas' | 'hoca' | 'musteri' | 'ozel' | 'patron' | 'sevgili';
+  gender: 'belirsiz' | 'erkek' | 'kadin';
+  closeness: number;
+  notes: string;
+} | null {
+  if (!profile) return null;
+  return {
+    name: profile.name,
+    relation: profile.relation as 'anne' | 'arkadas' | 'hoca' | 'musteri' | 'ozel' | 'patron' | 'sevgili',
+    gender: profile.gender as 'belirsiz' | 'erkek' | 'kadin',
+    closeness: profile.closeness,
+    notes: profile.notes,
+  };
+}
+
 export function getPersonProfile(db: DatabaseSync, deviceId: string, name: string): StoredPersonProfile | null {
   const row = db
     .prepare('SELECT name, relation, gender, closeness, notes FROM people WHERE device_id = ? AND name = ?')

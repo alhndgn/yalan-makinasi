@@ -3,6 +3,9 @@ import type { AiMode } from '../../shared/constants.ts';
 import { TeqSplash } from './components/TeqSplash.tsx';
 import { YalanMark } from './components/YalanMark.tsx';
 import { Generator } from './screens/Generator.tsx';
+import { LanguagePicker } from './screens/LanguagePicker.tsx';
+import { readLang, type Lang } from './lib/i18n.ts';
+import { useI18n } from './lib/lang.tsx';
 import { Ledger } from './screens/Ledger.tsx';
 import { Settings } from './screens/Settings.tsx';
 
@@ -11,7 +14,6 @@ type Tab = 'defter' | 'uret' | 'ayarlar';
 const SPLASH_FLAG = 'ym_splash_done';
 /** Açılış ekranının ekranda kalma süresi (ms). Yayın öncesi 1500-2000'e indirilebilir. */
 const SPLASH_MS = 5000;
-const TAGLINE = 'Yalancının mumu artık hep yanacak';
 
 function splashParam(): 'hold' | 'off' | null {
   if (typeof window === 'undefined') return null;
@@ -42,18 +44,33 @@ function initialTab(): Tab {
 }
 
 export function App() {
+  const { t, setLang } = useI18n();
+  const [chosen, setChosen] = useState<Lang | null>(() => readLang());
   const [tab, setTab] = useState<Tab>(initialTab);
   void 0;
   const [showSplash, setShowSplash] = useState(() => splashHoldRequested() || (!splashSkipped() && !splashAlreadySeen()));
 
 
 
+  if (!chosen) {
+    return (
+      <main className="shell">
+        <LanguagePicker
+          onPick={(lang) => {
+            setLang(lang);
+            setChosen(lang);
+          }}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="shell">
       {showSplash && (
         <TeqSplash
-          appName="Yalan Makinası"
-          tagline={TAGLINE}
+          appName={t('app.name')}
+          tagline={t('app.slogan')}
           accent="#A83A30"
           mark={<YalanMark size={72} color="#A83A30" needle="#1C1A17" />}
           durationMs={SPLASH_MS}
@@ -80,13 +97,13 @@ export function App() {
 
       <nav className="tabbar" aria-label="Bölümler">
         <button type="button" className={tab === 'defter' ? 'is-active' : ''} onClick={() => setTab('defter')}>
-          Defter
+          {t('tab.ledger')}
         </button>
         <button type="button" className={tab === 'uret' ? 'is-active' : ''} onClick={() => setTab('uret')}>
-          Üret
+          {t('tab.generate')}
         </button>
         <button type="button" className={tab === 'ayarlar' ? 'is-active' : ''} onClick={() => setTab('ayarlar')}>
-          Ayarlar
+          {t('tab.settings')}
         </button>
       </nav>
     </main>

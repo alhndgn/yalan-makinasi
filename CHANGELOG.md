@@ -1,3 +1,12 @@
+## v0.8.0 — 18 Kasım 2026
+
+- **İki dilli kullanım:** ilk açılışta dil seçimi ekranı (`LanguagePicker`), seçim `localStorage`'da tutulur ve bir daha sorulmaz; Ayarlar'dan değiştirilebilir.
+- `i18n.ts` sözlüğü (TR/EN) + `LangProvider`/`useI18n`; tab bar, üretici, deste, detay, defter, profil düzenleyici, ayarlar ve yüklenme ekranı tamamen çevrildi.
+- Yapay zekâ artık seçilen dilde üretiyor: `buildSystemPrompt(intensity, { lang })` ve `buildAnswerPrompt({ lang })` İngilizce kural + örnek + bant direktifleriyle; `GenerateRequest.lang` API'ye taşınıyor.
+- Çevrimdışı şablon motoruna İngilizce yedek metinler; ay adları ve tarih biçimi dile göre.
+- Gizlilik politikasının İngilizcesi (`docs/en.html`) yayımlandı.
+- 148/148 test.
+
 # Sürüm geçmişi
 
 ## v0.7.0 — 18 Kasım 2026

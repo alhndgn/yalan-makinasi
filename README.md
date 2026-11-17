@@ -65,7 +65,8 @@
 
 | | |
 |---|---|
-| **Üretim** | 5 hedef × 7 durum, 3 strateji (sade / detaylı / duygusal), 1-10 şiddet |
+| **Dil** | Türkçe + English: ilk açılışta bir kez sorulur, Ayarlar'dan değişir, yapay zekâ da o dilde yazar |
+| **Üretim** | 5 hedef × 7 durum, 3 strateji (sade / detaylı / duygusal), sabit doz |
 | **Analiz** | risk puanı + nedenleri, karşı tarafın soruları ve çelişmeyen cevaplar |
 | **Defter** | kişiye göre gruplu kayıtlar, arama, `beklemede → tuttu / tutmadı`, çelişki işareti |
 | **Ne diyeyim?** | kayıtlı yalanın ardından gelen soruya çelişmeyen cevap (AI + şablon yedeği) |
@@ -73,7 +74,7 @@
 | **Paylaşım** | panoya kopyala, WhatsApp'a at, 1080×1350 paylaşım kartı indir |
 | **Motor** | AI öncelikli; yapay zekâya ulaşılamazsa cihaz içi deterministik şablon motoru |
 | **Platform** | Android (Capacitor) + web/PWA, veriler cihazda ya da kendi sunucunda |
-| **Gizlilik** | hesap yok, çerez yok, analitik yok, reklam yok — [politika](https://alhndgn.github.io/yalan-makinasi/) |
+| **Gizlilik** | hesap yok, çerez yok, analitik yok, reklam yok — [TR](https://alhndgn.github.io/yalan-makinasi/) · [EN](https://alhndgn.github.io/yalan-makinasi/en.html) |
 
 ## Hızlı başlangıç
 
