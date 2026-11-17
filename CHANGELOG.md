@@ -1,5 +1,18 @@
 # Sürüm geçmişi
 
+## v0.5.0 — 17 Kasım 2026
+
+**Ürün odağı değişti: bahane üretici → yalan defteri.** Slogan: "Yalancının mumu artık hep yanacak."
+
+- **Defter açılış ekranı:** kişiye göre gruplu kayıtlar (ad, kayıt sayısı, çelişki işareti), kişi/metin arama.
+- **Manuel kayıt:** kendi yalanını yaz — kişi, metin, durum, kanal. Yapay zekâya hiç gitmez.
+- **"Ne diyeyim?"**: kayıtlı bir yalanın ardından gelen soruya, metinle çelişmeyen cevap (AI; erişilemezse soru provasından şablon cevap).
+- **Geçmişi hatırlayan AI:** üretimde aynı kişiye son 5 kayıt prompta eklenir; "aynı bahaneyi tekrar etme, ayrıntıları çelişme" talimatı verilir.
+- **Tekrar uyarısı:** üretimden önce "bu kişiye son 30 günde N kayıt var / aynı durumu N kez söyledin" uyarısı.
+- **Veri modeli:** `lies.person` + `lies.source` kolonları; eski veritabanları açılışta otomatik ve kayıpsız yükseltilir.
+- **Yeni uçlar:** `GET /api/lies/people`, `GET /api/lies/person/:ad`, `POST /api/lies/manual`.
+- Test sayısı 116 → 124 (göç, geçmiş enjeksiyonu, "ne diyeyim" şablonu, defter akışı).
+
 ## v0.4.0 — 15 Kasım 2026
 
 **Yeni akış**

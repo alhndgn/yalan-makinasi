@@ -6,12 +6,12 @@ import { Generator } from './screens/Generator.tsx';
 import { Ledger } from './screens/Ledger.tsx';
 import { Settings } from './screens/Settings.tsx';
 
-type Tab = 'uret' | 'defter' | 'ayarlar';
+type Tab = 'defter' | 'uret' | 'ayarlar';
 
 const SPLASH_FLAG = 'ym_splash_done';
 /** Açılış ekranının ekranda kalma süresi (ms). Yayın öncesi 1500-2000'e indirilebilir. */
 const SPLASH_MS = 5000;
-const TAGLINE = 'bir bahane değil, savunulabilir bir hikâye';
+const TAGLINE = 'Yalancının mumu artık hep yanacak';
 
 function splashParam(): 'hold' | 'off' | null {
   if (typeof window === 'undefined') return null;
@@ -36,9 +36,9 @@ function splashAlreadySeen(): boolean {
 }
 
 function initialTab(): Tab {
-  if (typeof window === 'undefined') return 'uret';
+  if (typeof window === 'undefined') return 'defter';
   const value = new URLSearchParams(window.location.search).get('tab');
-  return value === 'defter' || value === 'ayarlar' ? value : 'uret';
+  return value === 'uret' || value === 'ayarlar' ? value : 'defter';
 }
 
 export function App() {
@@ -74,16 +74,16 @@ export function App() {
         />
       )}
 
-      {tab === 'uret' && <Generator onGenerated={() => {}} />}
       {tab === 'defter' && <Ledger />}
+      {tab === 'uret' && <Generator onGenerated={() => {}} />}
       {tab === 'ayarlar' && <Settings aiMode={aiMode} onBack={() => setTab('uret')} />}
 
       <nav className="tabbar" aria-label="Bölümler">
-        <button type="button" className={tab === 'uret' ? 'is-active' : ''} onClick={() => setTab('uret')}>
-          Üret
-        </button>
         <button type="button" className={tab === 'defter' ? 'is-active' : ''} onClick={() => setTab('defter')}>
           Defter
+        </button>
+        <button type="button" className={tab === 'uret' ? 'is-active' : ''} onClick={() => setTab('uret')}>
+          Üret
         </button>
         <button type="button" className={tab === 'ayarlar' ? 'is-active' : ''} onClick={() => setTab('ayarlar')}>
           Ayarlar

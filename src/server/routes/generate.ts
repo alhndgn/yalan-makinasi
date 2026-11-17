@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { DatabaseSync } from 'node:sqlite';
 import { generateRequestSchema } from '../../shared/schema.ts';
 import type { LlmProvider } from '../../engine/types.ts';
-import { listRecentForTarget } from '../db.ts';
+import { listHistoryForPerson, listRecentForTarget } from '../db.ts';
 import { isAbusive } from '../abuse.ts';
 import { deviceIdOf, fail } from './helpers.ts';
 
@@ -24,7 +24,9 @@ export function registerGenerateRoutes(app: FastifyInstance, db: DatabaseSync, p
     const saltQuery = (req.query as { salt?: unknown }).salt;
     const salt = saltQuery === undefined ? String(Date.now()) : String(saltQuery);
 
-    const result = await provider.generate(body, { deviceId, salt, recent });
+    const person = (body.person ?? '').trim();
+    const history = person ? listHistoryForPerson(db, deviceId, person) : [];
+    const result = await provider.generate(body, { deviceId, salt, recent, person, history });
     return { variants: result.variants, provider: result.provider };
   });
 }

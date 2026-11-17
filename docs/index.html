@@ -48,7 +48,7 @@
   <span class="date">Son güncelleme: 15 Kasım 2026</span>
 
   <div class="box">
-    <b>Kısa özet:</b> Hesap açman gerekmez. Yazdığın metinler ve kayıtların yalnızca kendi cihazında ya da
+    <b>Kısa özet:</b> Yazdığın kişi adları dahil tüm kayıtlar sende kalır. Hesap açman gerekmez. Yazdığın metinler ve kayıtların yalnızca kendi cihazında ya da
     uygulamanın kendi veritabanında tutulur. Hiçbir veri reklam, pazarlama veya profil çıkarma amacıyla
     kullanılmaz, üçüncü taraflara satılmaz, kiralanmaz veya devredilmez.
   </div>
@@ -64,6 +64,11 @@
       <td>Seçimlerin (kime, ne oldu, ton, kanal, 1-10 şiddet) ve üretilen bahane metinleri</td>
       <td>Bahane üretmek, risk göstergesini ve soru provasını hazırlamak</td>
       <td>Sunucu modunda uygulama veritabanı; APK'da yalnızca cihaz içi depolama</td>
+    </tr>
+    <tr>
+      <td>Yalanı söylediğin kişinin adı (ör. "Ayşe", "patron Mehmet")</td>
+      <td>Kayıtları kişiye göre ayırmak ve sonraki önerilerde geçmişi hatırlamak</td>
+      <td>Uygulama veritabanı / cihaz içi depolama — yalnızca sen görürsün</td>
     </tr>
     <tr>
       <td>Rastgele cihaz kimliği (<code>UUID</code>)</td>
@@ -90,7 +95,8 @@
   <h2>4. Yapay zekâ ile üretim</h2>
   <p>Metinler bir dil modeliyle üretilir. Üretim sırasında <b>yalnızca</b> seçtiğin bağlam (kime, ne oldu,
     ton, kanal, şiddet düzeyi) ve varsa kendi yazdığın durum açıklaması model servisine iletilir.
-    Bu istekte adın, e-postan, cihaz kimliğin veya konumun <b>gönderilmez</b>. Servis sağlayıcı bu veriyi
+    İsteğe ayrıca, o kişiye daha önce ne söylediğini hatırlaması için <b>kişi adı ve önceki kayıtların</b> eklenir;
+    bu bilgiler yalnızca yanıt üretmek için kullanılır. İstekte senin adın, e-postan, cihaz kimliğin veya konumun <b>gönderilmez</b>. Servis sağlayıcı bu veriyi
     yalnızca yanıtı oluşturmak için işler; uygulama tarafında bu istekler için ayrıca kayıt tutulmaz.
     Yapay zekâ erişilemezse uygulama cihaz içi şablon motoruna düşer ve hiçbir veri dışarı çıkmaz.</p>
 

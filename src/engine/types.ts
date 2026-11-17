@@ -4,10 +4,15 @@ import type { GenerateRequest, Variant } from '../shared/schema.ts';
 /** Aynı kişiye söylenmiş son 30 günün kayıtları (çelişki hesabı için). */
 export type RecentLie = { situation: SituationId; detailTags: string[] };
 
+/** Aynı kişiye daha önce söylenenler — AI'ya bağlam olarak verilir. */
+export type HistoryEntry = { text: string; situation: string; createdAt: number };
+
 export type GenerateContext = {
   deviceId: string;
   salt: string;
   recent: RecentLie[];
+  person?: string;
+  history?: HistoryEntry[];
 };
 
 export type ProviderId = 'template' | 'ai' | 'ollama' | 'openrouter';

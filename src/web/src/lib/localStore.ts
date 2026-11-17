@@ -1,4 +1,4 @@
-import type { GenerateRequest, SavedLie, Variant } from '../../../shared/schema.ts';
+import type { GenerateRequest, ManualLieInput, PersonSummary, SavedLie, Variant } from '../../../shared/schema.ts';
 import type { SituationId, Status, TargetId } from '../../../shared/constants.ts';
 import { detailCountFor } from '../../../engine/compose.ts';
 import { prepareLie } from '../../../engine/prepareLie.ts';
@@ -42,6 +42,15 @@ function write(items: StoredLie[]): void {
   }
 }
 
+/** Aynı kişiye söylenenler (AI bağlamı için). */
+function historyFor(person: string): { text: string; situation: string; createdAt: number }[] {
+  if (!person) return [];
+  return read()
+    .filter((lie) => (lie.person ?? '') === person)
+    .slice(0, 5)
+    .map((lie) => ({ text: lie.text, situation: lie.situation, createdAt: lie.createdAt }));
+}
+
 function recentFor(target: TargetId): RecentLie[] {
   const since = Date.now() - THIRTY_DAYS;
   return read()
@@ -52,6 +61,9 @@ function recentFor(target: TargetId): RecentLie[] {
 function toSaved(lie: StoredLie): SavedLie {
   return {
     id: lie.id,
+    person: lie.person ?? '',
+    source: lie.source ?? 'ai',
+    channel: lie.channel,
     target: lie.target,
     situation: lie.situation,
     text: lie.text,
@@ -62,12 +74,50 @@ function toSaved(lie: StoredLie): SavedLie {
   };
 }
 
+type ConflictItem = { lieId: string; person: string; target: TargetId; text: string; createdAt: number; overlap: string };
+
+/** Aynı kişiye söylenen ve çakışan kayıt çiftleri. */
+function computeConflicts(since = Date.now() - THIRTY_DAYS): ConflictItem[] {
+  const rows = read().filter((lie) => lie.createdAt >= since);
+  const pairs: ConflictItem[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = i + 1; j < rows.length; j++) {
+      const a = rows[i]!;
+      const b = rows[j]!;
+      if ((a.person ?? '') !== (b.person ?? '')) continue;
+      if (a.target !== b.target) continue;
+
+      const tagsA = a.detailTags ?? [];
+      const shared = tagsA.filter((tag) => (b.detailTags ?? []).includes(tag));
+      const sameSituation = a.situation === b.situation;
+      if (!sameSituation && shared.length === 0) continue;
+
+      const key = [a.id, b.id].sort().join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      pairs.push({
+        lieId: a.id,
+        person: a.person ?? '',
+        target: a.target,
+        text: a.text,
+        createdAt: a.createdAt,
+        overlap: sameSituation ? 'aynı durum' : `ortak detay: ${shared.join(', ')}`,
+      });
+    }
+  }
+
+  return pairs.slice(0, 20);
+}
+
 export const localData = {
   async generate(body: GenerateRequest & { salt?: string }): Promise<{ variants: Variant[]; provider: string }> {
     const ai = readAiConfig();
     if (aiReady(ai)) {
       try {
-        return { variants: await generateWithAi(body, ai), provider: 'ai' };
+        return { variants: await generateWithAi(body, ai, { history: historyFor(body.person ?? '') }), provider: 'ai' };
       } catch {
         // AI'ya ulaşamadık: sessizce şablon motoruna düş, kullanıcı hata görmesin.
       }
@@ -95,16 +145,25 @@ export const localData = {
     return { score: risk.score, level: risk.level, reasons: risk.reasons };
   },
 
-  async saveLie(payload: { variant: Variant; form: GenerateRequest; provider?: string }): Promise<{ id: string }> {
+  async saveLie(payload: {
+    variant: Variant;
+    form: GenerateRequest;
+    provider?: string;
+    source?: 'ai' | 'manual';
+    happenedAt?: number;
+  }): Promise<{ id: string }> {
     const prepared = prepareLie(payload.form, payload.variant.text, recentFor(payload.form.target), payload.variant.text.length);
     const stored: StoredLie = {
       id: crypto.randomUUID(),
+      person: payload.form.person ?? '',
+      source: payload.source ?? 'ai',
+      channel: payload.form.channel,
       target: payload.form.target,
       situation: payload.form.situation,
       text: payload.variant.text,
       status: 'beklemede',
       riskScore: prepared.riskScore,
-      createdAt: Date.now(),
+      createdAt: payload.happenedAt ?? Date.now(),
       queries: prepared.queries,
       strategy: payload.variant.strategy,
       provider: payload.provider ?? 'template',
@@ -117,6 +176,86 @@ export const localData = {
 
   async listLies(): Promise<{ items: SavedLie[] }> {
     return { items: read().map(toSaved) };
+  },
+
+  /** Kendi yazdığın yalanı kaydeder (AI'ya gitmez). */
+  async saveManual(payload: ManualLieInput): Promise<{ id: string }> {
+    const person = payload.person.trim().replace(/\s+/g, ' ');
+    const situation = payload.situation ?? 'ozel';
+    const target = payload.target ?? 'ozel';
+    const prepared = prepareLie(
+      {
+        target,
+        situation,
+        channel: payload.channel ?? 'yuz_yuze',
+        intensity: 5,
+      },
+      payload.text,
+      recentFor(target),
+      payload.text.length,
+    );
+    const stored: StoredLie = {
+      id: crypto.randomUUID(),
+      person,
+      source: 'manual',
+      channel: payload.channel ?? 'yuz_yuze',
+      target,
+      situation,
+      text: payload.text,
+      status: 'beklemede',
+      riskScore: prepared.riskScore,
+      createdAt: payload.happenedAt ?? Date.now(),
+      queries: prepared.queries,
+      strategy: 'sade',
+      provider: 'manual',
+      riskReasons: prepared.riskReasons,
+      detailTags: prepared.detailTags,
+    };
+    write([stored, ...read()]);
+    return { id: stored.id };
+  },
+
+  /** Defterin kişi özeti. */
+  async people(): Promise<{ people: PersonSummary[] }> {
+    const since = Date.now() - THIRTY_DAYS;
+    const items = read();
+    const map = new Map<string, PersonSummary>();
+
+    for (const lie of items) {
+      const person = lie.person ?? '';
+      const current = map.get(person) ?? {
+        person,
+        count: 0,
+        lastAt: 0,
+        pending: 0,
+        conflicts: 0,
+        targets: [],
+      };
+      current.count += 1;
+      current.lastAt = Math.max(current.lastAt, lie.createdAt);
+      if (lie.status === 'beklemede') current.pending += 1;
+      if (!current.targets.includes(lie.target)) current.targets.push(lie.target);
+      map.set(person, current);
+    }
+
+    for (const pair of computeConflicts(since)) {
+      const entry = map.get(pair.person);
+      if (entry) entry.conflicts += 1;
+    }
+
+    return { people: [...map.values()].sort((a, b) => b.lastAt - a.lastAt) };
+  },
+
+  async byPerson(person: string): Promise<{ items: SavedLie[] }> {
+    return {
+      items: read()
+        .filter((lie) => (lie.person ?? '') === person)
+        .map(toSaved),
+    };
+  },
+
+  async history(person: string): Promise<{ text: string; situation: string; createdAt: number }[]> {
+    return historyFor(person);
   },
 
   async updateStatus(id: string, status: Status): Promise<{ ok: true }> {
@@ -135,33 +274,7 @@ export const localData = {
     return { deleted: count };
   },
 
-  async conflicts(): Promise<{ conflicts: { lieId: string; target: TargetId; text: string; createdAt: number; overlap: string }[] }> {
-    const since = Date.now() - THIRTY_DAYS;
-    const rows = read().filter((lie) => lie.createdAt >= since);
-    const pairs: { lieId: string; target: TargetId; text: string; createdAt: number; overlap: string }[] = [];
-    const seen = new Set<string>();
-
-    for (let i = 0; i < rows.length; i++) {
-      for (let j = i + 1; j < rows.length; j++) {
-        const a = rows[i]!;
-        const b = rows[j]!;
-        if (a.target !== b.target) continue;
-        const tagsA = a.detailTags ?? [];
-        const shared = tagsA.filter((tag) => (b.detailTags ?? []).includes(tag));
-        const sameSituation = a.situation === b.situation;
-        if (!sameSituation && shared.length === 0) continue;
-        const key = [a.id, b.id].sort().join('|');
-        if (seen.has(key)) continue;
-        seen.add(key);
-        pairs.push({
-          lieId: a.id,
-          target: a.target,
-          text: a.text,
-          createdAt: a.createdAt,
-          overlap: sameSituation ? 'aynı durum' : `ortak detay: ${shared.join(', ')}`,
-        });
-      }
-    }
-    return { conflicts: pairs.slice(0, 20) };
+  async conflicts(): Promise<{ conflicts: ConflictItem[] }> {
+    return { conflicts: computeConflicts() };
   },
 };

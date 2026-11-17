@@ -1,10 +1,13 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { ChannelId, SituationId, Status, Strategy, StyleId, TargetId } from '../shared/constants.ts';
+import type { ChannelId, LieSource, SituationId, Status, Strategy, StyleId, TargetId } from '../shared/constants.ts';
 
 export type SavedLie = {
   id: string;
+  person: string;
+  source: LieSource;
+  channel: ChannelId | null;
   target: TargetId;
   situation: SituationId;
   text: string;
@@ -18,6 +21,9 @@ export type SavedLie = {
 export type NewLie = {
   id: string;
   deviceId: string;
+  person?: string;
+  source?: LieSource;
+  happenedAt?: number;
   target: TargetId;
   situation: SituationId;
   situationCustom: string | null;
@@ -36,6 +42,9 @@ export type NewLie = {
 
 type Row = {
   id: string;
+  person: string | null;
+  source: string | null;
+  channel: string | null;
   target: string;
   situation: string;
   text: string;
@@ -46,10 +55,15 @@ type Row = {
   detail_tags: string;
 };
 
+const LIE_COLUMNS =
+  'id, person, source, channel, target, situation, text, status, risk_score, created_at, queries, detail_tags';
+
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS lies (
   id                TEXT PRIMARY KEY,
   device_id         TEXT NOT NULL,
+  person            TEXT NOT NULL DEFAULT '',
+  source            TEXT NOT NULL DEFAULT 'ai',
   target            TEXT NOT NULL,
   situation         TEXT NOT NULL,
   situation_custom  TEXT,
@@ -80,12 +94,25 @@ export function openDb(path: string): DatabaseSync {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec(SCHEMA_SQL);
+  migrate(db);
   return db;
+}
+
+/** Eski veritabanlarına kişi/kaynak kolonlarını ekler (veri kaybı yok). */
+function migrate(db: DatabaseSync): void {
+  const columns = db.prepare('PRAGMA table_info(lies)').all() as unknown as { name: string }[];
+  const names = new Set(columns.map((c) => c.name));
+  if (!names.has('person')) db.exec("ALTER TABLE lies ADD COLUMN person TEXT NOT NULL DEFAULT ''");
+  if (!names.has('source')) db.exec("ALTER TABLE lies ADD COLUMN source TEXT NOT NULL DEFAULT 'ai'");
+  db.exec('CREATE INDEX IF NOT EXISTS idx_lies_person ON lies(device_id, person, created_at DESC)');
 }
 
 function toSavedLie(row: Row): SavedLie {
   return {
     id: row.id,
+    person: row.person ?? '',
+    source: (row.source as LieSource | null) ?? 'ai',
+    channel: (row.channel as ChannelId | null) ?? null,
     target: row.target as TargetId,
     situation: row.situation as SituationId,
     text: row.text,
@@ -99,12 +126,14 @@ function toSavedLie(row: Row): SavedLie {
 
 export function insertLie(db: DatabaseSync, lie: NewLie): void {
   db.prepare(
-    `INSERT INTO lies (id, device_id, target, situation, situation_custom, channel, style, intensity,
-       text, strategy, risk_score, risk_reasons, queries, detail_tags, provider, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO lies (id, device_id, person, source, target, situation, situation_custom, channel, style,
+       intensity, text, strategy, risk_score, risk_reasons, queries, detail_tags, provider, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     lie.id,
     lie.deviceId,
+    lie.person ?? '',
+    lie.source ?? 'ai',
     lie.target,
     lie.situation,
     lie.situationCustom,
@@ -119,15 +148,14 @@ export function insertLie(db: DatabaseSync, lie: NewLie): void {
     JSON.stringify(lie.detailTags),
     lie.provider,
     lie.status,
-    Date.now(),
+    lie.happenedAt ?? Date.now(),
   );
 }
 
 export function listLies(db: DatabaseSync, deviceId: string, limit = 50): SavedLie[] {
   const rows = db
     .prepare(
-      `SELECT id, target, situation, text, status, risk_score, created_at, queries, detail_tags
-       FROM lies WHERE device_id = ? ORDER BY created_at DESC LIMIT ?`,
+      `SELECT ${LIE_COLUMNS} FROM lies WHERE device_id = ? ORDER BY created_at DESC LIMIT ?`,
     )
     .all(deviceId, limit) as unknown as Row[];
   return rows.map(toSavedLie);
@@ -135,12 +163,79 @@ export function listLies(db: DatabaseSync, deviceId: string, limit = 50): SavedL
 
 export function getLie(db: DatabaseSync, id: string, deviceId: string): SavedLie | null {
   const row = db
-    .prepare(
-      `SELECT id, target, situation, text, status, risk_score, created_at, queries, detail_tags
-       FROM lies WHERE id = ? AND device_id = ?`,
-    )
+    .prepare(`SELECT ${LIE_COLUMNS} FROM lies WHERE id = ? AND device_id = ?`)
     .get(id, deviceId) as unknown as Row | undefined;
   return row ? toSavedLie(row) : null;
+}
+
+export type PersonSummary = {
+  person: string;
+  count: number;
+  lastAt: number;
+  pending: number;
+  conflicts: number;
+  targets: string[];
+};
+
+/** Defterin ana görünümü: kişiye göre özet. */
+export function listPeople(db: DatabaseSync, deviceId: string): PersonSummary[] {
+  const rows = db
+    .prepare(
+      `SELECT person, COUNT(*) AS count, MAX(created_at) AS last_at,
+              SUM(CASE WHEN status = 'beklemede' THEN 1 ELSE 0 END) AS pending,
+              GROUP_CONCAT(DISTINCT target) AS targets
+       FROM lies WHERE device_id = ? GROUP BY person ORDER BY last_at DESC`,
+    )
+    .all(deviceId) as unknown as {
+    person: string | null;
+    count: number;
+    last_at: number;
+    pending: number | null;
+    targets: string | null;
+  }[];
+
+  const conflicts = new Map<string, number>();
+  for (const pair of findConflictPairs(db, deviceId)) {
+    const key = pair.person;
+    conflicts.set(key, (conflicts.get(key) ?? 0) + 1);
+  }
+
+  return rows.map((row) => {
+    const person = row.person ?? '';
+    return {
+      person,
+      count: Number(row.count),
+      lastAt: Number(row.last_at),
+      pending: Number(row.pending ?? 0),
+      conflicts: conflicts.get(person) ?? 0,
+      targets: (row.targets ?? '').split(',').filter(Boolean),
+    };
+  });
+}
+
+export function listByPerson(db: DatabaseSync, deviceId: string, person: string, limit = 100): SavedLie[] {
+  const rows = db
+    .prepare(
+      `SELECT ${LIE_COLUMNS} FROM lies WHERE device_id = ? AND person = ? ORDER BY created_at DESC LIMIT ?`,
+    )
+    .all(deviceId, person, limit) as unknown as Row[];
+  return rows.map(toSavedLie);
+}
+
+/** AI'ya bağlam olarak verilecek geçmiş (aynı kişiye son N kayıt). */
+export function listHistoryForPerson(
+  db: DatabaseSync,
+  deviceId: string,
+  person: string,
+  limit = 5,
+): { text: string; situation: string; createdAt: number }[] {
+  const rows = db
+    .prepare(
+      `SELECT text, situation, created_at FROM lies
+       WHERE device_id = ? AND person = ? ORDER BY created_at DESC LIMIT ?`,
+    )
+    .all(deviceId, person, limit) as unknown as { text: string; situation: string; created_at: number }[];
+  return rows.map((row) => ({ text: row.text, situation: row.situation, createdAt: row.created_at }));
 }
 
 export function updateLieStatus(db: DatabaseSync, id: string, deviceId: string, status: Status): boolean {
@@ -158,17 +253,25 @@ export function deleteAllLies(db: DatabaseSync, deviceId: string): number {
   return Number(res.changes);
 }
 
-export type ConflictPair = { lieId: string; target: TargetId; text: string; createdAt: number; overlap: string };
+export type ConflictPair = {
+  lieId: string;
+  person: string;
+  target: TargetId;
+  text: string;
+  createdAt: number;
+  overlap: string;
+};
 
 /** Son 30 günde aynı kişiye söylenen ve birbiriyle çakışan kayıtlar. */
 export function findConflictPairs(db: DatabaseSync, deviceId: string): ConflictPair[] {
   const rows = db
     .prepare(
-      `SELECT id, target, text, created_at, situation, detail_tags FROM lies
+      `SELECT id, person, target, text, created_at, situation, detail_tags FROM lies
        WHERE device_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 200`,
     )
     .all(deviceId, Date.now() - THIRTY_DAYS) as unknown as {
     id: string;
+    person: string | null;
     target: string;
     text: string;
     created_at: number;
@@ -196,6 +299,7 @@ export function findConflictPairs(db: DatabaseSync, deviceId: string): ConflictP
 
       pairs.push({
         lieId: a.id,
+        person: a.person ?? '',
         target: a.target as TargetId,
         text: a.text,
         createdAt: a.created_at,

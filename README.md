@@ -5,7 +5,7 @@
 <h1 align="center">Yalan Makinası</h1>
 
 <p align="center">
-  Bağlama göre üç alternatif bahane, her biri için yakalanma riski ve karşı tarafın soracağı soruların provası.
+  Yalan defterin: kime ne dedin, tuttu mu? Gerektiğinde üç alternatif bahane, riski ve hazır cevaplar.
 </p>
 
 <p align="center">
@@ -19,6 +19,9 @@
 
 ## Neden Yalan Makinası?
 
+- **Önce defter, sonra üretim.** Kime ne söylediğini kaydet (kendin yaz ya da üret); uygulama kişiye göre gruplar, arama yapar, çelişkileri işaretler.
+- **"Ne diyeyim?"** Karşı taraf bir soru sorduğunda kaydın altına yazarsın, söylediğin yalanla çelişmeyen cevabı hazırlar.
+- **Geçmişi hatırlayan yapay zekâ.** Yeni bahane üretirken aynı kişiye son 5 kaydı okur: aynı bahaneyi tekrar etmez, ayrıntıları (yer/saat/tanık) çelişmez.
 - **Şablon değil, bağlam.** Kime, hangi durumda, hangi kanalda ve ne kadar "şiddetli" bir bahaneye ihtiyacın olduğunu seçersin; metinler ona göre yazılır.
 - **1-10 yalan şiddeti.** Tek cümlelik beyaz yalandan, zaman çizgisi ve tanık iması olan senaryoya kadar ölçeklenir.
 - **Risk ölçer.** Her metnin yakalanma riski 0-100 arasında puanlanır ve nedenleri yazılır.
@@ -47,7 +50,16 @@
   </tr>
 </table>
 
-<p align="center"><img src="docs/screenshots/05-defter.png" alt="Yalan Defteri" width="48%"></p>
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/07-defter-kisiler.png" alt="Defter — kişiler"></td>
+    <td width="50%"><img src="docs/design/defter-cevap.png" alt="Ne diyeyim?"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Defter:</b> kişiye göre kayıtlar, arama</td>
+    <td align="center"><b>"Ne diyeyim?":</b> çelişmeyen cevap</td>
+  </tr>
+</table>
 
 ## Özellikler
 
@@ -55,7 +67,9 @@
 |---|---|
 | **Üretim** | 5 hedef × 7 durum, 3 strateji (sade / detaylı / duygusal), 1-10 şiddet |
 | **Analiz** | risk puanı + nedenleri, karşı tarafın soruları ve çelişmeyen cevaplar |
-| **Defter** | kayıt, `beklemede → tuttu / tutmadı` durum döngüsü, çelişki uyarısı |
+| **Defter** | kişiye göre gruplu kayıtlar, arama, `beklemede → tuttu / tutmadı`, çelişki işareti |
+| **Ne diyeyim?** | kayıtlı yalanın ardından gelen soruya çelişmeyen cevap (AI + şablon yedeği) |
+| **Manuel kayıt** | kendi yalanını yaz: kişi, metin, durum, kanal |
 | **Paylaşım** | panoya kopyala, WhatsApp'a at, 1080×1350 paylaşım kartı indir |
 | **Motor** | AI öncelikli; yapay zekâya ulaşılamazsa cihaz içi deterministik şablon motoru |
 | **Platform** | Android (Capacitor) + web/PWA, veriler cihazda ya da kendi sunucunda |
@@ -133,6 +147,7 @@ npm test          # 115 test: motor, API, AI istemcisi, arayüz akışı
 - [x] Yalan Defteri + çelişki uyarısı
 - [x] Paylaşım kartı, splash, üç adımlı akış
 - [x] AI beyni (deepseek-v4.1-flash), deste + tam ekran akışı
+- [x] Yalan defteri odaklı yeniden kurgu: kişi bazlı kayıtlar, "ne diyeyim", geçmişi hatırlayan AI
 - [ ] Topluluk akışı (oy, yorum)
 - [ ] Play Store yayını
 

@@ -1,4 +1,4 @@
-import type { GenerateRequest, SavedLie, Variant } from '../../../shared/schema.ts';
+import type { GenerateRequest, ManualLieInput, PersonSummary, SavedLie, Variant } from '../../../shared/schema.ts';
 import type { Status, TargetId } from '../../../shared/constants.ts';
 import { getDeviceId } from './deviceId.ts';
 import { aiReady, readAiConfig } from './aiConfig.ts';
@@ -36,7 +36,8 @@ export const api = {
     const ai = readAiConfig();
     if (aiReady(ai)) {
       try {
-        return { variants: await generateWithAi(body, ai), provider: 'ai' };
+        const history = body.person ? await api.history(body.person).catch(() => []) : [];
+        return { variants: await generateWithAi(body, ai, { history }), provider: 'ai' };
       } catch {
         /* sessizce şablona düş */
       }
@@ -60,8 +61,33 @@ export const api = {
     return call<RiskPreview>(`/api/lies/conflicts/preview?${qs}`);
   },
 
-  saveLie(payload: { variant: Variant; form: GenerateRequest; provider?: string }): Promise<{ id: string }> {
+  saveLie(payload: {
+    variant: Variant;
+    form: GenerateRequest;
+    provider?: string;
+    source?: 'ai' | 'manual';
+    happenedAt?: number;
+  }): Promise<{ id: string }> {
     return call<{ id: string }>('/api/lies', { method: 'POST', body: JSON.stringify(payload) });
+  },
+
+  /** Kullanıcının kendi yazdığı yalan. */
+  saveManual(payload: ManualLieInput): Promise<{ id: string }> {
+    return call<{ id: string }>('/api/lies/manual', { method: 'POST', body: JSON.stringify(payload) });
+  },
+
+  people(): Promise<{ people: PersonSummary[] }> {
+    return call<{ people: PersonSummary[] }>('/api/lies/people');
+  },
+
+  byPerson(person: string): Promise<{ items: SavedLie[] }> {
+    return call<{ items: SavedLie[] }>(`/api/lies/person/${encodeURIComponent(person)}`);
+  },
+
+  /** Aynı kişiye son söylenenler — AI bağlamı. */
+  async history(person: string): Promise<{ text: string; situation: string; createdAt: number }[]> {
+    const { items } = await api.byPerson(person);
+    return items.slice(0, 5).map((lie) => ({ text: lie.text, situation: lie.situation, createdAt: lie.createdAt }));
   },
 
   listLies(): Promise<{ items: SavedLie[] }> {

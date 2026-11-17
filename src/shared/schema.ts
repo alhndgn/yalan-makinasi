@@ -2,6 +2,8 @@ import { z } from 'zod';
 import {
   CHANNELS,
   CUSTOM_SITUATION_MAX,
+  LIE_SOURCES,
+  PERSON_MAX,
   INTENSITY_MAX,
   INTENSITY_MIN,
   SITUATIONS,
@@ -20,7 +22,15 @@ const styleSchema = enumOf(STYLES.map((s) => s.id));
 const strategySchema = enumOf(STRATEGIES);
 const statusSchema = enumOf(STATUSES);
 
+const personSchema = z
+  .string()
+  .trim()
+  .max(PERSON_MAX)
+  .transform((s) => s.replace(/\s+/g, ' '))
+  .optional();
+
 export const generateRequestSchema = z.object({
+  person: personSchema,
   target: targetSchema,
   situation: situationSchema,
   situationCustom: z
@@ -66,21 +76,65 @@ export type PreviewQuery = z.infer<typeof previewQuerySchema>;
 
 export const savedLieSchema = z.object({
   id: z.string(),
+  person: z.string().default(''),
   target: targetSchema,
   situation: situationSchema,
   text: z.string(),
   status: statusSchema,
   riskScore: z.number().int(),
   createdAt: z.number().int(),
+  source: z.enum(LIE_SOURCES).default('ai'),
+  channel: channelSchema.optional(),
+  queries: z.array(querySchema).default([]),
 });
 
 export type SavedLie = z.infer<typeof savedLieSchema>;
+
+/** Defterin kişi özeti. */
+export type PersonSummary = {
+  person: string;
+  count: number;
+  lastAt: number;
+  pending: number;
+  conflicts: number;
+  targets: string[];
+};
+
+export type ManualLieInput = {
+  person: string;
+  text: string;
+  target?: GenerateRequest['target'];
+  situation?: GenerateRequest['situation'];
+  channel?: GenerateRequest['channel'];
+  happenedAt?: number;
+};
 
 export const saveLieRequestSchema = z.object({
   variant: variantSchema,
   form: generateRequestSchema,
   provider: z.enum(['template', 'ai', 'ollama', 'openrouter']).optional(),
+  source: z.enum(LIE_SOURCES).optional(),
+  /** Kaydın gerçekleştiği an (manuel kayıtta geçmiş tarih seçilebilir). */
+  happenedAt: z.coerce.number().int().optional(),
 });
+
+/** Kullanıcının kendi yazdığı yalan kaydı. */
+export const manualLieSchema = z.object({
+  person: z.string().trim().min(1).max(PERSON_MAX),
+  text: z.string().trim().min(3).max(1000),
+  target: targetSchema.optional(),
+  situation: situationSchema.optional(),
+  channel: channelSchema.optional(),
+  happenedAt: z.coerce.number().int().optional(),
+});
+
+/** "Ne diyeyim?" — kayıtlı bir yalan için gelen soruya cevap. */
+export const followUpSchema = z.object({
+  lieId: z.string().min(1),
+  question: z.string().trim().min(2).max(200),
+});
+
+export type FollowUpRequest = z.infer<typeof followUpSchema>;
 
 export const updateStatusSchema = z.object({
   status: z.enum(['beklemede', 'tuttu', 'tutmadı']),

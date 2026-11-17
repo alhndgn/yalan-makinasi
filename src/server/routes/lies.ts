@@ -2,7 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import type { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { previewQuerySchema, saveLieRequestSchema, updateStatusSchema } from '../../shared/schema.ts';
+import {
+  manualLieSchema,
+  previewQuerySchema,
+  saveLieRequestSchema,
+  updateStatusSchema,
+} from '../../shared/schema.ts';
 import { detailCountFor } from '../../engine/compose.ts';
 import { buildQueries } from '../../engine/queries.ts';
 import { mulberry32 } from '../../engine/random.ts';
@@ -14,7 +19,9 @@ import {
   deleteLie,
   findConflictPairs,
   insertLie,
+  listByPerson,
   listLies,
+  listPeople,
   listRecentForTarget,
   updateLieStatus,
 } from '../db.ts';
@@ -36,12 +43,70 @@ export function registerLieRoutes(app: FastifyInstance, db: DatabaseSync) {
     return { items: listLies(db, deviceIdOf(req), limit) };
   });
 
+  /** Defterin ana görünümü: kişiye göre özet. */
+  app.get('/api/lies/people', async (req) => ({
+    people: listPeople(db, deviceIdOf(req)),
+  }));
+
+  app.get('/api/lies/person/:person', async (req) => {
+    const { person } = req.params as { person: string };
+    return { items: listByPerson(db, deviceIdOf(req), decodeURIComponent(person)) };
+  });
+
+  /** Kullanıcının kendi yazdığı yalanı kaydeder (AI'ya gitmez). */
+  app.post('/api/lies/manual', async (req, reply) => {
+    const parsed = manualLieSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(reply, 400, 'VALIDATION', 'Kişi ve metin zorunlu.');
+    }
+    const { person, text, target, situation, channel, happenedAt } = parsed.data;
+    const deviceId = deviceIdOf(req);
+    const safeSituation = situation ?? 'ozel';
+    const details = matchedDetails(safeSituation, text);
+    const risk = scoreRisk({
+      intensity: 5,
+      target: target ?? 'ozel',
+      channel: channel ?? 'yuz_yuze',
+      detailCount: details.length,
+      hasSecondPerson: details.some((d) => d.tag === 'ikinci_kisi'),
+      hasLocation: details.some((d) => d.tag === 'konum'),
+      mentionsDocument: DOCUMENT_WORDS.test(text),
+      conflictCount: 0,
+    });
+
+    const id = randomUUID();
+    insertLie(db, {
+      id,
+      deviceId,
+      person,
+      source: 'manual',
+      happenedAt,
+      target: target ?? 'ozel',
+      situation: safeSituation,
+      situationCustom: null,
+      channel: channel ?? 'yuz_yuze',
+      style: 'ciddi',
+      intensity: 5,
+      text,
+      strategy: 'sade',
+      riskScore: risk.score,
+      riskReasons: risk.reasons,
+      queries: [],
+      detailTags: [...new Set(details.map((d) => d.tag))],
+      provider: 'manual',
+      status: 'beklemede',
+    });
+
+    return { id, createdAt: happenedAt ?? Date.now() };
+  });
+
   app.post('/api/lies', async (req, reply) => {
     const parsed = saveLieRequestSchema.safeParse(req.body);
     if (!parsed.success) return fail(reply, 400, 'VALIDATION', 'Kayıt gövdesi geçersiz.');
 
     const { variant, form } = parsed.data;
     const deviceId = deviceIdOf(req);
+    const person = form.person ?? '';
 
     // Sunucu otoritesi: risk ve sorgular istemciden değil, metinden yeniden üretilir.
     const details = matchedDetails(form.situation, variant.text);
@@ -62,6 +127,9 @@ export function registerLieRoutes(app: FastifyInstance, db: DatabaseSync) {
     insertLie(db, {
       id,
       deviceId,
+      person,
+      source: parsed.data.source ?? 'ai',
+      happenedAt: parsed.data.happenedAt,
       target: form.target,
       situation: form.situation,
       situationCustom: form.situationCustom ?? null,

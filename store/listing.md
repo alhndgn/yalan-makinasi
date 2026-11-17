@@ -9,7 +9,7 @@ Yalan Makinası — Bahane Üretici
 ## Kısa açıklama (80 karakter)
 
 ```
-Üç alternatif bahane, risk puanı ve karşı tarafın sorularına hazır cevaplar.
+Yalan defterin: kime ne dedin, tuttu mu? Üç alternatif bahane ve hazır cevaplar.
 ```
 
 ## Tam açıklama (4000 karakter sınırı)
@@ -38,6 +38,12 @@ NASIL ÇALIŞIR?
    işi yetiştiremedim) ya da kendin yaz.
 3) Yalan şiddetini 1-10 arasında ayarla ve Üret'e bas.
 4) Üç alternatifi kaydırarak gez, birini tam ekran aç, kopyala veya WhatsApp'a gönder.
+
+YALAN DEFTERİ
+• Kime ne söylediğini kaydet — ister yapay zekâdan üret, ister kendi yalanını yaz.
+• Kişiye göre gruplu liste: "Ayşe · 3 kayıt · 1 çelişki". Ara, bul, durumu işaretle.
+• "Ne diyeyim?": karşı taraf bir soru sorduğunda, söylediğin yalanla çelişmeyen cevabı hazırlar.
+• Yapay zekâ bir dahaki sefere geçmişi hatırlar: aynı bahaneyi tekrar etmez, ayrıntıları çelişmez.
 
 GİZLİLİK
 Hesap açman gerekmez. Ad, telefon, konum, rehber veya reklam kimliği toplanmaz. Kayıtlar

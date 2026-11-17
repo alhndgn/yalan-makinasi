@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { PersonSummary } from '../../../shared/schema.ts';
 import { CHANNELS, DEFAULT_FORM, SITUATIONS, STYLES, TARGETS } from '../../../shared/constants.ts';
 import type { GenerateRequest, Variant } from '../../../shared/schema.ts';
 import { GeneratingScreen } from '../components/GeneratingScreen.tsx';
@@ -11,6 +12,7 @@ import { ApiError, type RiskPreview } from '../lib/api.ts';
 import { data } from '../lib/data.ts';
 import { readDefaults } from '../lib/defaults.ts';
 import { intensityBand } from '../lib/intensity.ts';
+import { repeatWarning } from '../lib/personView.ts';
 
 type Props = { onGenerated: (variants: Variant[]) => void };
 type View = 'form' | 'loading' | 'deck' | 'detail';
@@ -20,8 +22,10 @@ const RISK_LABEL: Record<RiskPreview['level'], string> = { dusuk: 'düşük', or
 export function Generator({ onGenerated }: Props) {
   const [form, setForm] = useState<GenerateRequest>(() => {
     const defaults = readDefaults();
-    return { ...DEFAULT_FORM, style: defaults.style, intensity: defaults.intensity };
+    return { ...DEFAULT_FORM, person: '', style: defaults.style, intensity: defaults.intensity };
   });
+  const [people, setPeople] = useState<PersonSummary[]>([]);
+  const [repeat, setRepeat] = useState<string | null>(null);
   const [usedForm, setUsedForm] = useState<GenerateRequest | null>(null);
   const [openStep, setOpenStep] = useState<1 | 2 | 3>(1);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -42,6 +46,28 @@ export function Generator({ onGenerated }: Props) {
     }, 250);
     return () => clearTimeout(timer);
   }, [form.target, form.situation, form.channel, form.intensity]);
+
+  useEffect(() => {
+    data
+      .people()
+      .then((r) => setPeople(Array.isArray(r?.people) ? r.people : []))
+      .catch(() => setPeople([]));
+  }, []);
+
+  // Aynı kişiye aynı bahaneyi tekrar mı veriyorsun?
+  useEffect(() => {
+    const person = (form.person ?? '').trim();
+    if (!person) {
+      setRepeat(null);
+      return;
+    }
+    data
+      .byPerson(person)
+      .then((r) =>
+        setRepeat(repeatWarning((r.items ?? []).map((i) => ({ situation: i.situation, createdAt: i.createdAt })), form.situation)),
+      )
+      .catch(() => setRepeat(null));
+  }, [form.person, form.situation]);
 
   function pick<T extends Partial<GenerateRequest>>(patch: T, nextStep: 1 | 2 | 3) {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -137,8 +163,39 @@ export function Generator({ onGenerated }: Props) {
         <h1 className="h1">Üç adım</h1>
         <p className="muted">Sırayla seç, gerisi kendiliğinden.</p>
 
-        <div style={{ marginTop: 20 }}>
-          <StepCard step={1} title="Kime?" summary={targetLabel} open={openStep === 1} onOpen={() => setOpenStep(1)}>
+        <div className="person-box">
+          <label className="field-label" htmlFor="person-input">
+            Kimin için?
+          </label>
+          <input
+            id="person-input"
+            className="input person-input"
+            list="ym-people"
+            placeholder="İsim yaz (ör. Ayşe, patron Mehmet)"
+            maxLength={40}
+            value={form.person ?? ''}
+            onChange={(e) => setForm((prev) => ({ ...prev, person: e.target.value }))}
+          />
+          <datalist id="ym-people">
+            {people.map((p) => (
+              <option key={p.person} value={p.person} />
+            ))}
+          </datalist>
+          <p className="small faint person-hint">
+            {form.person?.trim()
+              ? 'Bu kişiye daha önce söylediklerini hatırlıyoruz.'
+              : 'İsim yazarsan geçmişi hatırlar, aynı bahaneyi tekrar etmez.'}
+          </p>
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <StepCard
+            step={1}
+            title="Kime?"
+            summary={form.person ? `${form.person} · ${targetLabel}` : targetLabel}
+            open={openStep === 1}
+            onOpen={() => setOpenStep(1)}
+          >
             <div className="chips">
               {TARGETS.map((t) => (
                 <button
@@ -205,6 +262,12 @@ export function Generator({ onGenerated }: Props) {
             <IntensitySlider value={form.intensity} onChange={(value) => setForm((prev) => ({ ...prev, intensity: value }))} />
           </StepCard>
         </div>
+
+        {repeat && (
+          <p className="repeat-warning" role="status">
+            {repeat}
+          </p>
+        )}
 
         <button className="cta" type="button" onClick={() => void generate()}>
           Üret <small>3 alternatif</small>

@@ -43,6 +43,12 @@ export type Strategy = (typeof STRATEGIES)[number];
 export const STATUSES = ['beklemede', 'tuttu', 'tutmadı'] as const;
 export type Status = (typeof STATUSES)[number];
 
+/** Kişi adı (kime söylediğin) sınırı. */
+export const PERSON_MAX = 40;
+/** Kaydın kaynağı: yapay zekâ önerisi mi, kullanıcı kendi mi yazdı. */
+export const LIE_SOURCES = ['ai', 'manual'] as const;
+export type LieSource = (typeof LIE_SOURCES)[number];
+
 export const INTENSITY_MIN = 1;
 export const INTENSITY_MAX = 10;
 export const CUSTOM_SITUATION_MAX = 180;

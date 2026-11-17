@@ -5,6 +5,8 @@
  * Şiddet (1-10) arttıkça cümle sayısı, ayrıntı ve duygu katmanı artar; ama ton hep konuşma dili kalır.
  */
 
+export type HistoryEntry = { text: string; situation: string; createdAt: number };
+
 export type IntensityBand = {
   min: number;
   max: number;
@@ -111,16 +113,95 @@ KÖTÜ: "Sayın yöneticim, trafik yoğunluğu nedeniyle toplantıya katılamad�
 KÖTÜ: "Merhaba canım, bugün seninle görüşemeyeceğim çünkü çok yorgunum ve dinlenmem gerekiyor."
 İYİ: "kuzum bugün beni affet, kafam kazan gibi. yarın telafi edicem söz."`;
 
+function historySection(person: string | undefined, history: HistoryEntry[] | undefined): string {
+  const name = (person ?? '').trim();
+  const items = history ?? [];
+  if (!name) return '';
+
+  if (items.length === 0) {
+    return `## Geçmiş\n${name} kişisine daha önce kayıtlı bir şey söylememişsin, yani onunla ilk kez konuşuyorsun. Metin buna göre temiz bir sayfa olsun.`;
+  }
+
+  const lines = items
+    .slice(0, 5)
+    .map((item) => {
+      const date = new Date(item.createdAt);
+      const when = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}`;
+      return `- ${when} · ${item.situation.replaceAll('_', ' ')}: "${item.text.slice(0, 220)}"`;
+    })
+    .join('\n');
+
+  return [
+    `## Geçmiş (${name})`,
+    'Bu kişiye daha önce şunları söyledin:',
+    lines,
+    '',
+    'Bu metinlerle ÇELİŞME. Aynı bahaneyi kelimesi kelimesine tekrar etme; aynı ayrıntıları (yer, saat, tanık) yeniden kullanma.',
+    "Uygun olduğunda önceki bir mazerete doğal biçimde atıf yapabilirsin (\"geçen sefer de öyle olmuştu\" gibi) — ama abartma.",
+  ].join('\n');
+}
+
 /** Şiddete göre sistem promptu üretir (aynı girdi → aynı prompt). */
-export function buildSystemPrompt(intensity: number): string {
+export function buildSystemPrompt(intensity: number, opts: { person?: string; history?: HistoryEntry[] } = {}): string {
   const band = bandFor(intensity);
   const value = Math.min(10, Math.max(1, Math.round(Number.isFinite(intensity) ? intensity : 5)));
+  const history = historySection(opts.person, opts.history);
   return [
     RULES,
     `## Bu istek için bant: ${band.name} (şiddet ${value}/10)`,
     band.directive,
+    history,
     EXAMPLES,
-  ].join('\n\n');
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+/**
+ * "Ne diyeyim?" — kayıtlı bir yalanın ardından gelen soruya cevap üretir.
+ * Cevap, kayıtlı metinle çelişmemeli ve kısa/konuşma dili olmalı.
+ */
+export function buildAnswerPrompt(input: { lieText: string; question: string; person?: string }): string {
+  return `Sen Türkçe yazan bir "kıvırma asistanısın". Kullanıcı daha önce birine bir bahane söyledi; şimdi karşı taraf bir soru sordu.
+Görevin: o soruya, söylenen bahaneyle ÇELİŞMEYEN, kısa ve insan ağzıyla bir cevap yazmak.
+
+## Kurallar
+- Cevap 1-2 cümle. Uzun açıklama yok, madde imi yok, emoji yok.
+- Metinde geçen ayrıntılara sadık kal; yeni bir ayrıntı uydurma. Gerekirse "bilmiyorum" diyebilecek kadar doğal ol.
+- Karşı tarafın sorusu bir tuzağa benziyorsa (çelişki yakalamak için soruyorsa) cevabı dar tut, konuyu dağıtmadan geç.
+- Resmî belge, sağlık raporu, imza, fatura, mahkeme/polis içeriği yok.
+- Makine gibi değil; "valla", "yani", "işte" gibi doğal kalıplar serbest (ölçülü).
+
+## Çıktı
+Yalnızca şu JSON: {"answer":"..."}
+
+## Girdi
+${JSON.stringify({ person: input.person ?? null, lie: input.lieText, question: input.question })}`;
+}
+
+/** AI erişilemezse: kayıtlı soru provasından en yakın cevabı seçer. */
+export function fallbackAnswer(
+  question: string,
+  queries: { q: string; a: string }[],
+  lieText: string,
+): string {
+  const normalize = (value: string) =>
+    value
+      .toLocaleLowerCase('tr')
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 3);
+
+  const words = new Set(normalize(question));
+  let best: { score: number; answer: string } | null = null;
+  for (const item of queries) {
+    const score = normalize(item.q).filter((w) => words.has(w)).length;
+    if (score > 0 && (!best || score > best.score)) best = { score, answer: item.a };
+  }
+  if (best) return best.answer;
+
+  const firstSentence = lieText.split(/(?<=[.!?])\s+/)[0]?.trim() ?? lieText;
+  return `valla öyle oldu işte, ${firstSentence.replace(/\.$/, '')} — sonra detaylı anlatırım.`;
 }
 
 /** Varsayılan bant (5) ile hazır prompt — eski çağrılar için. */

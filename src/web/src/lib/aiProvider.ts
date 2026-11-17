@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { buildSystemPrompt } from '../../../engine/prompt.ts';
+import { buildAnswerPrompt, buildSystemPrompt, type HistoryEntry } from '../../../engine/prompt.ts';
 import { variantSchema, type GenerateRequest, type Variant } from '../../../shared/schema.ts';
 import { getDeviceId } from './deviceId.ts';
 import type { AiConfig } from './aiConfig.ts';
 import { endpointFor, isNativeApp, postJson, sessionId } from './aiTransport.ts';
 
 const responseSchema = z.object({ variants: z.array(variantSchema).length(3) });
+const answerSchema = z.object({ answer: z.string().min(1) });
 
 /** Model bazen JSON'u ```json ... ``` içine sarar; temizle. */
 function stripFences(text: string): string {
@@ -37,12 +38,15 @@ async function ask(cfg: AiConfig, payload: Record<string, unknown>, timeoutMs: n
 
 /**
  * AI'dan üç varyant ister.
- * - Native (APK): doğrudan sağlayıcı, CORS yok.
- * - Web: /api/ai/chat proxy'si, anahtar sunucuda kalır.
- * Reasoning'i kapatıyoruz (deepseek-v4.1-flash düşünme token'ı yakarsa yanıt 2 katı sürüyor).
+ * `history`, aynı kişiye daha önce söylenen kayıtlardır: model çelişmesin ve kendini tekrar etmesin.
  * Önce JSON modunda dener, sunucu desteklemiyorsa formatsız tekrar dener; olmazsa hata fırlatır (çağıran şablona düşer).
  */
-export async function generateWithAi(req: GenerateRequest, cfg: AiConfig, timeoutMs = 60000): Promise<Variant[]> {
+export async function generateWithAi(
+  req: GenerateRequest,
+  cfg: AiConfig,
+  opts: { history?: HistoryEntry[] } = {},
+  timeoutMs = 60000,
+): Promise<Variant[]> {
   const base = {
     model: cfg.model,
     temperature: 0.95,
@@ -50,10 +54,11 @@ export async function generateWithAi(req: GenerateRequest, cfg: AiConfig, timeou
     thinking: { type: 'disabled' },
     reasoning_effort: 'minimal',
     messages: [
-      { role: 'system', content: buildSystemPrompt(req.intensity) },
+      { role: 'system', content: buildSystemPrompt(req.intensity, { person: req.person, history: opts.history }) },
       {
         role: 'user',
         content: JSON.stringify({
+          person: req.person ?? null,
           target: req.target,
           situation: req.situation,
           situationCustom: req.situationCustom ?? null,
@@ -75,4 +80,30 @@ export async function generateWithAi(req: GenerateRequest, cfg: AiConfig, timeou
   if (!raw) throw new Error('AI boş yanıt verdi');
 
   return responseSchema.parse(JSON.parse(stripFences(raw))).variants;
+}
+
+/** "Ne diyeyim?" — kayıtlı bir yalanın ardından gelen soruya cevap. */
+export async function answerWithAi(
+  input: { lieText: string; question: string; person?: string },
+  cfg: AiConfig,
+  timeoutMs = 30000,
+): Promise<string> {
+  const payload = {
+    model: cfg.model,
+    temperature: 0.7,
+    max_tokens: 500,
+    thinking: { type: 'disabled' },
+    reasoning_effort: 'minimal',
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: buildAnswerPrompt(input) },
+      { role: 'user', content: input.question },
+    ],
+  };
+
+  const res = await ask(cfg, payload, timeoutMs);
+  if (!res.ok) throw new Error(`AI sunucusu ${res.status} döndü`);
+  const raw = extractContent(res.body);
+  if (!raw) throw new Error('AI boş yanıt verdi');
+  return answerSchema.parse(JSON.parse(stripFences(raw))).answer.trim();
 }
