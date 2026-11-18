@@ -1,3 +1,13 @@
+## v0.9.0 — 18 Kasım 2026
+
+- **Çelişki motoru** (`src/engine/conflict.ts`): aynı mazeretin tekrarı, neredeyse aynı cümle, aynı gün iki farklı mazeret, zıt ayrıntı (hasta ↔ şehir dışında). AI'sız, deterministik; kişi kartındaki kırmızı nokta artık çelişki ekranını açıyor.
+- **Kişi karnesi** (`src/engine/insights.ts`): tutma oranı, tuttu/tutmadı/beklemede sayıları, en sık bahane, son 14 gün çubukları.
+- **Takvim**: defterde Kişiler/Takvim geçişi, son 30 gün ısı haritası, güne dokununca o günün kayıtları.
+- **Akıbet hatırlatması**: 48 saat beklemede kalan kayıt için native yerel bildirim (`@capacitor/local-notifications`, POST_NOTIFICATIONS izni); web'de defter üstünde bant.
+- **Mum serisi**: üst üste kayıt eklenen gün sayısı.
+- **Defter kilidi**: 4 haneli PIN, PBKDF2-SHA256 + salt (düz metin saklanmaz), 5 yanlışta 30 sn bekleme, arka planda 5 dk sonra yeniden kilit; "şifremi unuttum" → destek e-postası + son çare sıfırlama.
+- Yeni testlerle birlikte **177** test yeşil.
+
 ## v0.8.0 — 18 Kasım 2026
 
 - **İki dilli kullanım:** ilk açılışta dil seçimi ekranı (`LanguagePicker`), seçim `localStorage`'da tutulur ve bir daha sorulmaz; Ayarlar'dan değiştirilebilir.

@@ -5,6 +5,8 @@ import { YalanMark } from './components/YalanMark.tsx';
 import { Generator } from './screens/Generator.tsx';
 import { LanguagePicker } from './screens/LanguagePicker.tsx';
 import { readLang, type Lang } from './lib/i18n.ts';
+import { LockScreen } from './screens/LockScreen.tsx';
+import { hasPin, isUnlocked, markLocked, shouldRelock } from './lib/lock.ts';
 import { useI18n } from './lib/lang.tsx';
 import { Ledger } from './screens/Ledger.tsx';
 import { Settings } from './screens/Settings.tsx';
@@ -47,8 +49,26 @@ export function App() {
   const { t, setLang } = useI18n();
   const [chosen, setChosen] = useState<Lang | null>(() => readLang());
   const [tab, setTab] = useState<Tab>(initialTab);
-  void 0;
+  const [locked, setLocked] = useState(() => hasPin() && !isUnlocked());
   const [showSplash, setShowSplash] = useState(() => splashHoldRequested() || (!splashSkipped() && !splashAlreadySeen()));
+
+  // Arka planda 5 dakikadan fazla kalınca defter tekrar kilitlenir.
+  useEffect(() => {
+    let hiddenAt: number | null = null;
+    function onVisibility() {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+        return;
+      }
+      if (hiddenAt !== null && shouldRelock(hiddenAt) && hasPin()) {
+        markLocked();
+        setLocked(true);
+      }
+      hiddenAt = null;
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
 
 
@@ -86,7 +106,11 @@ export function App() {
         />
       )}
 
-      {/* Sekmeler açık kalır: üretim sürerken deftere bakabilir, dönünce sonucu bulabilirsin. */}
+      {locked ? (
+        <LockScreen onUnlock={() => setLocked(false)} />
+      ) : (
+        <>
+          {/* Sekmeler açık kalır: üretim sürerken deftere bakabilir, dönünce sonucu bulabilirsin. */}
       <div hidden={tab !== 'defter'}>
         <Ledger />
       </div>
@@ -95,17 +119,19 @@ export function App() {
       </div>
       {tab === 'ayarlar' && <Settings onBack={() => setTab('uret')} />}
 
-      <nav className="tabbar" aria-label="Bölümler">
+          <nav className="tabbar" aria-label="Bölümler">
         <button type="button" className={tab === 'defter' ? 'is-active' : ''} onClick={() => setTab('defter')}>
           {t('tab.ledger')}
         </button>
         <button type="button" className={tab === 'uret' ? 'is-active' : ''} onClick={() => setTab('uret')}>
           {t('tab.generate')}
         </button>
-        <button type="button" className={tab === 'ayarlar' ? 'is-active' : ''} onClick={() => setTab('ayarlar')}>
-          {t('tab.settings')}
-        </button>
-      </nav>
+            <button type="button" className={tab === 'ayarlar' ? 'is-active' : ''} onClick={() => setTab('ayarlar')}>
+              {t('tab.settings')}
+            </button>
+          </nav>
+        </>
+      )}
     </main>
   );
 }

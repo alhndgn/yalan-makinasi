@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ManualLieInput, PersonProfile, PersonSummary, SavedLie } from '../../../shared/schema.ts';
 import type { Status } from '../../../shared/constants.ts';
 import { CHANNELS, SITUATIONS, TARGETS } from '../../../shared/constants.ts';
+import { findConflicts, type Conflict, type LieLike } from '../../../engine/conflict.ts';
+import { calendar, scorecard, stalePending, streakDays } from '../../../engine/insights.ts';
 import { fallbackAnswer } from '../../../engine/prompt.ts';
 import { aiReady, readAiConfig } from '../lib/aiConfig.ts';
 import { answerWithAi } from '../lib/aiProvider.ts';
@@ -9,10 +11,12 @@ import { data } from '../lib/data.ts';
 import { formatWhen } from '../lib/format.ts';
 import { sourceLabel } from '../lib/personView.ts';
 import { useI18n } from '../lib/lang.tsx';
+import { pendingReminderCount, syncReminders } from '../lib/reminder.ts';
 
 type View =
   | { kind: 'people' }
   | { kind: 'person'; person: string }
+  | { kind: 'conflicts'; person: string }
   | { kind: 'lie'; lie: SavedLie }
   | { kind: 'new' }
   | { kind: 'profile'; person: string };
@@ -24,42 +28,41 @@ export function Ledger() {
   const [people, setPeople] = useState<PersonSummary[] | null>(null);
   const [lies, setLies] = useState<SavedLie[]>([]);
   const [view, setView] = useState<View>({ kind: 'people' });
+  const [mode, setMode] = useState<'people' | 'calendar'>('people');
   const [query, setQuery] = useState('');
+  const [dayKey, setDayKey] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const statusLabel = (status: Status) => t(`status.${status}`);
 
-  async function refreshPeople() {
+  async function refreshAll() {
     try {
-      const result = await data.people();
-      setPeople(Array.isArray(result?.people) ? result.people : []);
+      const [peopleResult, liesResult] = await Promise.all([data.people(), data.listLies()]);
+      setPeople(Array.isArray(peopleResult?.people) ? peopleResult.people : []);
+      setLies(Array.isArray(liesResult?.items) ? liesResult.items : []);
     } catch {
       setPeople([]);
     }
   }
 
   useEffect(() => {
-    void refreshPeople();
-    data
-      .listLies()
-      .then((r) => setLies(Array.isArray(r?.items) ? r.items : []))
-      .catch(() => setLies([]));
+    void refreshAll();
   }, []);
+
+  // Bildirimler: native'de 48 saat sonrası için zamanlanır, web'de bant gösterilir.
+  useEffect(() => {
+    if (lies.length === 0) return;
+    void syncReminders(lies, lang);
+  }, [lies, lang]);
 
   function flash(message: string) {
     setNote(message);
     setTimeout(() => setNote(null), 2200);
   }
 
-  async function openPerson(person: string) {
+  function openPerson(person: string) {
     setView({ kind: 'person', person });
-    try {
-      const result = await data.byPerson(person);
-      setLies(Array.isArray(result?.items) ? result.items : []);
-    } catch {
-      setLies([]);
-    }
   }
 
   async function cycleStatus(lie: SavedLie) {
@@ -68,17 +71,18 @@ export function Ledger() {
     setLies((prev) => prev.map((item) => (item.id === lie.id ? { ...item, status: next } : item)));
     try {
       await data.updateStatus(lie.id, next);
-      await refreshPeople();
+      await refreshAll();
     } catch {
       flash(t('ledger.statusFailed'));
     }
   }
 
   async function remove(id: string) {
+    const person = view.kind === 'lie' ? (view.lie.person ?? '') : '';
     await data.deleteLie(id).catch(() => null);
     setLies((prev) => prev.filter((item) => item.id !== id));
-    await refreshPeople();
-    setView({ kind: 'people' });
+    await refreshAll();
+    setView(person ? { kind: 'person', person } : { kind: 'people' });
     flash(t('ledger.deleted'));
   }
 
@@ -95,9 +99,7 @@ export function Ledger() {
     setBusy(true);
     try {
       await data.saveManual(input);
-      await refreshPeople();
-      const result = await data.listLies();
-      setLies(Array.isArray(result?.items) ? result.items : []);
+      await refreshAll();
       setView({ kind: 'person', person: input.person.trim() });
       flash(t('ledger.added'));
     } catch {
@@ -106,6 +108,22 @@ export function Ledger() {
       setBusy(false);
     }
   }
+
+  /** Kişi başına çelişki sayısı — kart üzerindeki kırmızı nokta. */
+  const conflictsByPerson = useMemo(() => {
+    const map = new Map<string, Conflict[]>();
+    const grouped = new Map<string, SavedLie[]>();
+    for (const lie of lies) {
+      const key = lie.person ?? '';
+      grouped.set(key, [...(grouped.get(key) ?? []), lie]);
+    }
+    for (const [person, items] of grouped) map.set(person, findConflicts(items));
+    return map;
+  }, [lies]);
+
+  const streak = useMemo(() => streakDays(lies), [lies]);
+  const reminderCount = useMemo(() => pendingReminderCount(lies), [lies]);
+  const calendarDays = useMemo(() => calendar(lies, 30), [lies]);
 
   const filteredPeople = useMemo(() => {
     const list = people ?? [];
@@ -137,94 +155,119 @@ export function Ledger() {
             </button>
           </header>
 
-          <h1 className="h1">{t('ledger.heading')}</h1>
-          <p className="muted">{t('app.slogan')}</p>
-
-          <input
-            className="input search"
-            placeholder={t('ledger.search')}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label={t('ledger.searchAria')}
-          />
-
-          {filteredPeople.length === 0 ? (
-            <div className="card empty">
-              <p className="empty-title">{people.length === 0 ? t('ledger.emptyTitle') : t('ledger.noResult')}</p>
-              <p className="muted">{people.length === 0 ? t('ledger.emptyBody') : t('ledger.noResultBody')}</p>
-              <button type="button" className="cta" onClick={() => setView({ kind: 'new' })}>
-                {t('ledger.emptyAction')}
-              </button>
+          <div className="ledger-head">
+            <h1 className="h1">{t('ledger.heading')}</h1>
+            <div className="ledger-meta">
+              <span className="streak" data-testid="streak">
+                🕯 {streak > 0 ? t('ledger.streak', { days: streak }) : t('ledger.streakZero')}
+              </span>
+              <div className="seg seg-tiny" data-testid="ledger-mode">
+                <button type="button" className={mode === 'people' ? 'is-active' : ''} onClick={() => setMode('people')}>
+                  {t('ledger.people')}
+                </button>
+                <button
+                  type="button"
+                  className={mode === 'calendar' ? 'is-active' : ''}
+                  onClick={() => setMode('calendar')}
+                >
+                  {t('ledger.calendar')}
+                </button>
+              </div>
             </div>
-          ) : (
-            <ul className="people" data-testid="people-list">
-              {filteredPeople.map((person) => (
-                <li key={person.person || 'unnamed'}>
-                  <button type="button" className="person-card" onClick={() => void openPerson(person.person)}>
-                    <span className="person-avatar" aria-hidden="true">
-                      {(person.person.trim()[0] ?? '?').toLocaleUpperCase(lang === 'tr' ? 'tr' : 'en')}
-                    </span>
-                    <span className="person-main">
-                      <span className="person-name">{person.person || t('ledger.unnamed')}</span>
-                      <span className="person-meta">
-                        {person.targets.map((target) => label('target', target)).join(' · ')}
-                        {person.closeness ? ` · ${t('gen.closeness')} ${person.closeness}/10` : ''}
-                      </span>
-                    </span>
-                    <span className="person-side">
-                      <span className="person-count">{person.count}</span>
-                      {person.conflicts > 0 && <span className="dot dot-red" title="!" />}
-                    </span>
+          </div>
+
+          {reminderCount > 0 && (
+            <button type="button" className="remind-banner" data-testid="reminder-banner" onClick={() => setMode('calendar')}>
+              <span className="remind-dot" aria-hidden="true" />
+              {t('ledger.reminder', { count: reminderCount })}
+            </button>
+          )}
+
+          {mode === 'people' ? (
+            <>
+              <input
+                className="input search"
+                placeholder={t('ledger.search')}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label={t('ledger.searchAria')}
+              />
+
+              {filteredPeople.length === 0 ? (
+                <div className="card empty">
+                  <p className="empty-title">{people.length === 0 ? t('ledger.emptyTitle') : t('ledger.noResult')}</p>
+                  <p className="muted">{people.length === 0 ? t('ledger.emptyBody') : t('ledger.noResultBody')}</p>
+                  <button type="button" className="cta" onClick={() => setView({ kind: 'new' })}>
+                    {t('ledger.emptyAction')}
                   </button>
-                </li>
-              ))}
-            </ul>
+                </div>
+              ) : (
+                <ul className="people" data-testid="people-list">
+                  {filteredPeople.map((person) => {
+                    const conflictTotal = conflictsByPerson.get(person.person)?.length ?? 0;
+                    return (
+                      <li key={person.person || 'unnamed'}>
+                        <button type="button" className="person-card" onClick={() => openPerson(person.person)}>
+                          <span className="person-avatar" aria-hidden="true">
+                            {(person.person.trim()[0] ?? '?').toLocaleUpperCase(lang === 'tr' ? 'tr' : 'en')}
+                          </span>
+                          <span className="person-main">
+                            <span className="person-name">{person.person || t('ledger.unnamed')}</span>
+                            <span className="person-meta">
+                              {person.targets.map((target) => label('target', target)).join(' · ')}
+                              {person.closeness ? ` · ${t('gen.closeness')} ${person.closeness}/10` : ''}
+                            </span>
+                          </span>
+                          <span className="person-side">
+                            <span className="person-count">{person.count}</span>
+                            {conflictTotal > 0 && (
+                              <span className="dot dot-red" title={t('ledger.conflictCount', { count: conflictTotal })} />
+                            )}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </>
+          ) : (
+            <CalendarView
+              days={calendarDays}
+              lies={lies}
+              activeKey={dayKey}
+              onPick={(key) => setDayKey(key === dayKey ? null : key)}
+            />
           )}
         </>
       )}
 
       {view.kind === 'person' && (
-        <>
-          <header className="detail-top">
-            <button type="button" className="round" onClick={() => setView({ kind: 'people' })} aria-label={t('ledger.back')}>
-              ‹
-            </button>
-            <span className="detail-title">{view.person || t('ledger.unnamed')}</span>
-            <span className="spacer" />
-            <button type="button" className="ghost" onClick={() => setView({ kind: 'profile', person: view.person })}>
-              {t('ledger.profile')}
-            </button>
-            <button type="button" className="ghost" onClick={() => setView({ kind: 'new' })}>
-              {t('ledger.addShort')}
-            </button>
-          </header>
+        <PersonView
+          person={view.person}
+          lies={lies}
+          conflicts={conflictsByPerson.get(view.person) ?? []}
+          onBack={() => setView({ kind: 'people' })}
+          onProfile={() => setView({ kind: 'profile', person: view.person })}
+          onAdd={() => setView({ kind: 'new' })}
+          onOpenLie={(lie) => setView({ kind: 'lie', lie })}
+          onConflicts={() => setView({ kind: 'conflicts', person: view.person })}
+        />
+      )}
 
-          {lies.filter((lie) => (lie.person ?? '') === view.person).length === 0 ? (
-            <p className="muted">{t('ledger.noneForPerson')}</p>
-          ) : (
-            <ul className="lies" data-testid="person-lies">
-              {lies
-                .filter((lie) => (lie.person ?? '') === view.person)
-                .map((lie) => (
-                  <li key={lie.id}>
-                    <button type="button" className="lie-row" onClick={() => setView({ kind: 'lie', lie })}>
-                      <span className="lie-row-top">
-                        <span className={`badge badge-${lie.status}`}>{statusLabel(lie.status)}</span>
-                        <span className="small faint">{formatWhen(lie.createdAt, lang)}</span>
-                      </span>
-                      <span className="lie-row-text">{lie.text}</span>
-                    </button>
-                  </li>
-                ))}
-            </ul>
-          )}
-        </>
+      {view.kind === 'conflicts' && (
+        <ConflictsView
+          person={view.person}
+          conflicts={conflictsByPerson.get(view.person) ?? []}
+          onBack={() => setView({ kind: 'person', person: view.person })}
+          onOpenLie={(lie) => setView({ kind: 'lie', lie: lie as SavedLie })}
+        />
       )}
 
       {view.kind === 'lie' && (
         <LieDetail
           lie={view.lie}
-          onBack={() => void openPerson(view.lie.person ?? '')}
+          onBack={() => openPerson(view.lie.person ?? '')}
           onCopy={() => void copy(view.lie.text)}
           onCycle={() => void cycleStatus(view.lie)}
           onDelete={() => void remove(view.lie.id)}
@@ -239,7 +282,7 @@ export function Ledger() {
           person={view.person}
           onBack={() => setView({ kind: 'person', person: view.person })}
           onSaved={async () => {
-            await refreshPeople();
+            await refreshAll();
             flash(t('ledger.profileSaved'));
             setView({ kind: 'person', person: view.person });
           }}
@@ -254,6 +297,246 @@ export function Ledger() {
     </section>
   );
 }
+
+/* ------------------------------ kişi görünümü ------------------------------ */
+
+function PersonView({
+  person,
+  lies,
+  conflicts,
+  onBack,
+  onProfile,
+  onAdd,
+  onOpenLie,
+  onConflicts,
+}: {
+  person: string;
+  lies: SavedLie[];
+  conflicts: Conflict[];
+  onBack: () => void;
+  onProfile: () => void;
+  onAdd: () => void;
+  onOpenLie: (lie: SavedLie) => void;
+  onConflicts: () => void;
+}) {
+  const { t, lang, label } = useI18n();
+  const mine = lies.filter((lie) => (lie.person ?? '') === person);
+  const card = scorecard(mine);
+  const bars = calendar(mine, 14);
+
+  return (
+    <>
+      <header className="detail-top">
+        <button type="button" className="round" onClick={onBack} aria-label={t('ledger.back')}>
+          ‹
+        </button>
+        <span className="detail-title">{person || t('ledger.unnamed')}</span>
+        <span className="spacer" />
+        <button type="button" className="ghost" onClick={onProfile}>
+          {t('ledger.profile')}
+        </button>
+        <button type="button" className="ghost" onClick={onAdd}>
+          {t('ledger.addShort')}
+        </button>
+      </header>
+
+      <div className="scorecard" data-testid="scorecard">
+        <div className="score-main">
+          <span className="score-value">{card.heldRate === null ? '—' : `${card.heldRate}%`}</span>
+          <span className="score-label">{t('score.held')}</span>
+        </div>
+        <div className="score-cells">
+          <span>
+            <b>{card.total}</b> {t('score.total')}
+          </span>
+          <span>
+            <b>{card.held}</b> {t('score.kept')}
+          </span>
+          <span>
+            <b>{card.failed}</b> {t('score.failed')}
+          </span>
+          <span>
+            <b>{card.pending}</b> {t('score.pending')}
+          </span>
+        </div>
+        {card.topSituation && (
+          <p className="score-note">
+            {t('score.top')}: {label('situation', card.topSituation)} · {card.topSituationCount}×
+          </p>
+        )}
+        <div className="score-bars" aria-hidden="true">
+          {bars.map((bar) => (
+            <span key={bar.key} className={`score-bar ${bar.count > 0 ? 'is-on' : ''}`} title={bar.key} />
+          ))}
+        </div>
+      </div>
+
+      {conflicts.length > 0 && (
+        <button type="button" className="conflict-strip" data-testid="conflict-strip" onClick={onConflicts}>
+          <span className="conflict-count">{conflicts.length}</span>
+          <span className="conflict-text">
+            {t('ledger.conflictStrip')}
+            <span className="conflict-sub">{t('ledger.conflictStripHint')}</span>
+          </span>
+          <span aria-hidden="true">›</span>
+        </button>
+      )}
+
+      {mine.length === 0 ? (
+        <p className="muted">{t('ledger.noneForPerson')}</p>
+      ) : (
+        <ul className="lies" data-testid="person-lies">
+          {mine.map((lie) => (
+            <li key={lie.id}>
+              <button type="button" className="lie-row" onClick={() => onOpenLie(lie)}>
+                <span className="lie-row-top">
+                  <span className={`badge badge-${lie.status}`}>{t(`status.${lie.status}`)}</span>
+                  <span className="small faint">{formatWhen(lie.createdAt, lang)}</span>
+                </span>
+                <span className="lie-row-text">{lie.text}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+/* ------------------------------ çelişkiler ------------------------------ */
+
+function ConflictsView({
+  person,
+  conflicts,
+  onBack,
+  onOpenLie,
+}: {
+  person: string;
+  conflicts: Conflict[];
+  onBack: () => void;
+  onOpenLie: (lie: LieLike) => void;
+}) {
+  const { t, lang } = useI18n();
+
+  return (
+    <div className="conflicts" data-testid="conflicts">
+      <header className="detail-top">
+        <button type="button" className="round" onClick={onBack} aria-label={t('ledger.back')}>
+          ‹
+        </button>
+        <span className="detail-title">{person}</span>
+        <span className="spacer" />
+        <span className="small faint">
+          {conflicts.length} {t('conflict.count')}
+        </span>
+      </header>
+
+      <p className="muted small">{t('conflict.intro')}</p>
+
+      {conflicts.length === 0 && <p className="muted">{t('conflict.none')}</p>}
+
+      <ul className="conflict-list">
+        {conflicts.map((conflict) => (
+          <li key={conflict.id} className={`conflict-card sev-${conflict.severity}`}>
+            <div className="conflict-head">
+              <span className={`conflict-kind kind-${conflict.kind}`}>{t(`conflict.kind.${conflict.kind}`)}</span>
+              <span className={`severity sev-${conflict.severity}`}>{t(`conflict.sev.${conflict.severity}`)}</span>
+            </div>
+
+            <button type="button" className="conflict-item" onClick={() => onOpenLie(conflict.a)}>
+              <span className="small faint">{formatWhen(conflict.a.createdAt, lang)}</span>
+              <span className="conflict-quote">“{conflict.a.text}”</span>
+            </button>
+            <button type="button" className="conflict-item" onClick={() => onOpenLie(conflict.b)}>
+              <span className="small faint">{formatWhen(conflict.b.createdAt, lang)}</span>
+              <span className="conflict-quote">“{conflict.b.text}”</span>
+            </button>
+
+            <p className="conflict-why">
+              {conflict.kind === 'detail' && conflict.pair
+                ? t('conflict.why.detail', { a: conflict.pair[0], b: conflict.pair[1] })
+                : t(`conflict.why.${conflict.kind}`)}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ------------------------------ takvim ------------------------------ */
+
+function CalendarView({
+  days,
+  lies,
+  activeKey,
+  onPick,
+}: {
+  days: { key: string; label: string; count: number }[];
+  lies: SavedLie[];
+  activeKey: string | null;
+  onPick: (key: string) => void;
+}) {
+  const { t, lang } = useI18n();
+  const max = Math.max(1, ...days.map((day) => day.count));
+  const dayItems = activeKey
+    ? lies.filter((lie) => {
+        const d = new Date(lie.createdAt);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        return key === activeKey;
+      })
+    : [];
+
+  return (
+    <div className="calendar" data-testid="calendar">
+      <div className="heat">
+        {days.map((day) => {
+          const level = day.count === 0 ? 0 : Math.min(4, Math.ceil((day.count / max) * 4));
+          return (
+            <button
+              key={day.key}
+              type="button"
+              className={`heat-cell lvl-${level} ${activeKey === day.key ? 'is-active' : ''}`}
+              onClick={() => onPick(day.key)}
+              aria-label={`${day.key}: ${day.count}`}
+              title={`${day.key} · ${day.count}`}
+            >
+              {day.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="small faint heat-legend">{t('calendar.legend')}</p>
+
+      {activeKey ? (
+        dayItems.length === 0 ? (
+          <p className="muted">{t('calendar.emptyDay')}</p>
+        ) : (
+          <ul className="lies">
+            {dayItems.map((lie) => (
+              <li key={lie.id}>
+                <div className="lie-row is-static">
+                  <span className="lie-row-top">
+                    <span className={`badge badge-${lie.status}`}>{t(`status.${lie.status}`)}</span>
+                    <span className="small faint">
+                      {lie.person} · {formatWhen(lie.createdAt, lang)}
+                    </span>
+                  </span>
+                  <span className="lie-row-text">{lie.text}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : (
+        <p className="small faint">{t('calendar.hint')}</p>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------ kayıt detayı ------------------------------ */
 
 function LieDetail({
   lie,
@@ -383,6 +666,8 @@ function LieDetail({
   );
 }
 
+/* ------------------------------ yeni kayıt ------------------------------ */
+
 function NewLie({
   onCancel,
   onSave,
@@ -490,6 +775,8 @@ function NewLie({
   );
 }
 
+/* ------------------------------ kişi profili ------------------------------ */
+
 function ProfileEditor({
   person,
   onBack,
@@ -499,7 +786,7 @@ function ProfileEditor({
   onBack: () => void;
   onSaved: () => Promise<void>;
 }) {
-  const { t, lang, label } = useI18n();
+  const { t, label } = useI18n();
   const [profile, setProfile] = useState<PersonProfile | null>(null);
   const [busy, setBusy] = useState(false);
 
