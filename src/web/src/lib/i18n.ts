@@ -121,6 +121,7 @@ const tr: Dict = {
   'ledger.deleteConfirm': 'Eminim, sil',
   'ledger.loading': 'Yükleniyor…',
   'ledger.added': 'Deftere eklendi.',
+  'common.undo': 'geri al',
   'ledger.deleted': 'Kayıt silindi.',
   'ledger.saveFailed': 'Kaydedilemedi, tekrar dene.',
   'ledger.statusFailed': 'Durum güncellenemedi.',
@@ -163,6 +164,7 @@ const tr: Dict = {
   'profile.back': 'Kişiye dön',
 
   // durumlar
+  'status.changed': 'Durum',
   'status.beklemede': 'beklemede',
   'status.tuttu': 'tuttu',
   'status.tutmadı': 'tutmadı',
@@ -255,6 +257,19 @@ const tr: Dict = {
   'settings.lockEnabled': 'Kilit açık.',
   'settings.lockDisabled': 'Kilit kaldırıldı.',
   'settings.lockRemoveConfirm': 'Kilit kaldırılsın mı? Defter şifresiz açılacak.',
+
+
+  // kişi profili kartı (v0.10)
+  'danger.caption': 'Bu kişiye karşı tehlike',
+  'danger.aria': 'Tehlike yüzdesi {percent}',
+  'danger.level.dusuk': 'güvenli',
+  'danger.level.orta': 'dikkat',
+  'danger.level.yuksek': 'yüksek',
+  'score.success': 'başarı',
+  'ledger.gridHint': 'Kutuya dokun → durumu değişir',
+  'ledger.openLie': 'Kaydı aç',
+  'ledger.cycleAria': 'Durumu değiştir',
+  'profile.avatarPick': 'Profil fotoğrafı seç',
 
   // zaman
   'time.now': 'az önce',
@@ -372,6 +387,7 @@ const en: Dict = {
   'ledger.deleteConfirm': 'Yes, delete',
   'ledger.loading': 'Loading…',
   'ledger.added': 'Added to the ledger.',
+  'common.undo': 'undo',
   'ledger.deleted': 'Record deleted.',
   'ledger.saveFailed': 'Could not save, try again.',
   'ledger.statusFailed': 'Could not update the status.',
@@ -411,6 +427,7 @@ const en: Dict = {
   'profile.saving': 'Saving…',
   'profile.back': 'Back to person',
 
+  'status.changed': 'Status',
   'status.beklemede': 'pending',
   'status.tuttu': 'held up',
   'status.tutmadı': 'fell apart',
@@ -494,6 +511,17 @@ const en: Dict = {
   'settings.lockEnabled': 'Lock is on.',
   'settings.lockDisabled': 'Lock removed.',
   'settings.lockRemoveConfirm': 'Remove the lock? The ledger will open without a PIN.',
+  'danger.caption': 'Risk with this person',
+  'danger.aria': 'Danger score {percent}',
+  'danger.level.dusuk': 'safe',
+  'danger.level.orta': 'watch',
+  'danger.level.yuksek': 'high',
+  'score.success': 'success',
+  'ledger.gridHint': 'Tap a card to change its status',
+  'ledger.openLie': 'Open record',
+  'ledger.cycleAria': 'Change status',
+  'profile.avatarPick': 'Choose profile photo',
+
 
 
   'time.now': 'just now',

@@ -65,7 +65,7 @@ export function VariantDeck({ variants, index, contextLabel, onIndex, onUse, onB
   }
 
   return (
-    <section className="screen deck-screen" data-testid="deck">
+    <section className="screen deck-screen view-enter" data-testid="deck">
       <div className="deck-top">
         <span className="kicker">{t('deck.kicker')}</span>
         <span className="deck-context">{contextLabel}</span>

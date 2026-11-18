@@ -188,7 +188,7 @@ export function Generator({ onGenerated }: Props) {
   }
 
   return (
-    <section className="screen gen-form" data-provider={provider} data-view={view}>
+    <section className="screen gen-form view-enter" data-provider={provider} data-view={view}>
       <header className="brandbar">
         <div className="brand">
           <YalanMark size={20} color="#D0342C" needle="#141312" />

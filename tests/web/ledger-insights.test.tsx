@@ -55,8 +55,9 @@ describe('defter içgörüleri', () => {
     render(<Ledger />);
     await userEvent.click(await screen.findByText('Ayşe'));
 
-    const card = await screen.findByTestId('scorecard');
+    const card = await screen.findByTestId('profile-card');
     expect(card).toBeInTheDocument();
+    expect(screen.getByTestId('danger-gauge')).toBeInTheDocument();
     expect(screen.getByText('50%')).toBeInTheDocument();
     expect(screen.getByTestId('conflict-strip')).toBeInTheDocument();
   });

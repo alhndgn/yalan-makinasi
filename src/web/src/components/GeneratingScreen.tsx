@@ -29,7 +29,7 @@ export function GeneratingScreen({ estimateMs = 16000, startedAt }: Props) {
   const percent = Math.min(97, Math.round((elapsed / Math.max(3000, estimateMs)) * 100));
 
   return (
-    <section className="screen gen-screen" data-testid="generating-screen" aria-live="polite" aria-busy="true">
+    <section className="screen gen-screen view-enter" data-testid="generating-screen" aria-live="polite" aria-busy="true">
       <div className="gen-stage">
         <div className={`gen-ring ${step === last ? 'is-lit' : ''}`}>
           <span className="gen-stamp">YALAN</span>

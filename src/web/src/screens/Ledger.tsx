@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ManualLieInput, PersonProfile, PersonSummary, SavedLie } from '../../../shared/schema.ts';
 import type { Status } from '../../../shared/constants.ts';
 import { CHANNELS, SITUATIONS, TARGETS } from '../../../shared/constants.ts';
 import { findConflicts, type Conflict, type LieLike } from '../../../engine/conflict.ts';
-import { calendar, scorecard, stalePending, streakDays } from '../../../engine/insights.ts';
-import { fallbackAnswer } from '../../../engine/prompt.ts';
-import { aiReady, readAiConfig } from '../lib/aiConfig.ts';
-import { answerWithAi } from '../lib/aiProvider.ts';
+import { calendar, dangerScore, scorecard, stalePending, streakDays } from '../../../engine/insights.ts';
+import { ProfileCard } from '../components/ProfileCard.tsx';
 import { data } from '../lib/data.ts';
 import { formatWhen } from '../lib/format.ts';
 import { sourceLabel } from '../lib/personView.ts';
@@ -61,13 +59,35 @@ export function Ledger() {
     void syncReminders(lies, lang);
   }, [lies, lang]);
 
-  function flash(message: string) {
+  const undoRef = useRef<null | (() => void)>(null);
+
+  /** Kısa bildirim; `undo` verilirse toast içinde "geri al" düğmesi çıkar. */
+  function flash(message: string, undo?: () => void) {
+    undoRef.current = undo ?? null;
     setNote(message);
-    setTimeout(() => setNote(null), 2200);
+    setTimeout(() => setNote(null), undo ? 4200 : 2400);
   }
 
   function openPerson(person: string) {
     setView({ kind: 'person', person });
+  }
+
+  /** Kart üzerinde durum değiştirme — ekran değişmez, geri alınabilir. */
+  async function bumpStatus(lie: SavedLie) {
+    const next = NEXT_STATUS[lie.status];
+    const previous = lie.status;
+    setLies((prev) => prev.map((item) => (item.id === lie.id ? { ...item, status: next } : item)));
+    try {
+      await data.updateStatus(lie.id, next);
+      notifyDataChanged();
+      flash(`${t('status.changed')} · ${t(`status.${next}`)}`, () => {
+        setLies((prev) => prev.map((item) => (item.id === lie.id ? { ...item, status: previous } : item)));
+        void data.updateStatus(lie.id, previous).then(notifyDataChanged).catch(() => null);
+      });
+    } catch {
+      setLies((prev) => prev.map((item) => (item.id === lie.id ? { ...item, status: previous } : item)));
+      flash(t('ledger.statusFailed'));
+    }
   }
 
   async function cycleStatus(lie: SavedLie) {
@@ -252,11 +272,13 @@ export function Ledger() {
         <PersonView
           person={view.person}
           lies={lies}
+          summary={people?.find((item) => item.person === view.person)}
           conflicts={conflictsByPerson.get(view.person) ?? []}
           onBack={() => setView({ kind: 'people' })}
           onProfile={() => setView({ kind: 'profile', person: view.person })}
           onAdd={() => setView({ kind: 'new' })}
           onOpenLie={(lie) => setView({ kind: 'lie', lie })}
+          onCycle={(lie) => void bumpStatus(lie)}
           onConflicts={() => setView({ kind: 'conflicts', person: view.person })}
         />
       )}
@@ -277,7 +299,6 @@ export function Ledger() {
           onCopy={() => void copy(view.lie.text)}
           onCycle={() => void cycleStatus(view.lie)}
           onDelete={() => void remove(view.lie.id)}
-          onNote={flash}
         />
       )}
 
@@ -298,6 +319,19 @@ export function Ledger() {
       {note && (
         <p className="toast" role="status">
           {note}
+          {undoRef.current && (
+            <button
+              type="button"
+              className="toast-action"
+              onClick={() => {
+                undoRef.current?.();
+                undoRef.current = null;
+                setNote(null);
+              }}
+            >
+              {t('common.undo')}
+            </button>
+          )}
         </p>
       )}
     </section>
@@ -309,80 +343,68 @@ export function Ledger() {
 function PersonView({
   person,
   lies,
+  summary,
   conflicts,
   onBack,
   onProfile,
   onAdd,
   onOpenLie,
+  onCycle,
   onConflicts,
 }: {
   person: string;
   lies: SavedLie[];
+  summary?: PersonSummary;
   conflicts: Conflict[];
   onBack: () => void;
   onProfile: () => void;
   onAdd: () => void;
   onOpenLie: (lie: SavedLie) => void;
+  onCycle: (lie: SavedLie) => void;
   onConflicts: () => void;
 }) {
   const { t, lang, label } = useI18n();
   const mine = lies.filter((lie) => (lie.person ?? '') === person);
   const card = scorecard(mine);
-  const bars = calendar(mine, 14);
+  const danger = dangerScore(mine);
+  const relationLabel = label('target', summary?.relation ?? summary?.targets?.[0] ?? 'arkadas');
 
   return (
-    <>
+    <div className="person-view view-enter">
       <header className="detail-top">
         <button type="button" className="round" onClick={onBack} aria-label={t('ledger.back')}>
           ‹
         </button>
-        <span className="detail-title">{person || t('ledger.unnamed')}</span>
+        <span className="detail-title">{t('ledger.title')}</span>
         <span className="spacer" />
-        <button type="button" className="ghost" onClick={onProfile}>
-          {t('ledger.profile')}
-        </button>
         <button type="button" className="ghost" onClick={onAdd}>
           {t('ledger.addShort')}
         </button>
       </header>
 
-      <div className="scorecard" data-testid="scorecard">
-        <div className="score-main">
-          <span className="score-value">{card.heldRate === null ? '—' : `${card.heldRate}%`}</span>
-          <span className="score-label">{t('score.held')}</span>
-        </div>
-        <div className="score-cells">
-          <span>
-            <b>{card.total}</b> {t('score.total')}
-          </span>
-          <span>
-            <b>{card.held}</b> {t('score.kept')}
-          </span>
-          <span>
-            <b>{card.failed}</b> {t('score.failed')}
-          </span>
-          <span>
-            <b>{card.pending}</b> {t('score.pending')}
-          </span>
-        </div>
-        {card.topSituation && (
-          <p className="score-note">
-            {t('score.top')}: {label('situation', card.topSituation)} · {card.topSituationCount}×
-          </p>
-        )}
-        <div className="score-bars" aria-hidden="true">
-          {bars.map((bar) => (
-            <span key={bar.key} className={`score-bar ${bar.count > 0 ? 'is-on' : ''}`} title={bar.key} />
-          ))}
-        </div>
-      </div>
+      <ProfileCard
+        person={person}
+        relationLabel={relationLabel}
+        closeness={summary?.closeness}
+        danger={danger}
+        card={card}
+        onEdit={onProfile}
+      />
+
+      {card.topSituation && (
+        <p className="top-note">
+          {t('score.top')}: <b>{label('situation', card.topSituation)}</b> · {card.topSituationCount}×
+        </p>
+      )}
 
       {conflicts.length > 0 && (
         <button type="button" className="conflict-strip" data-testid="conflict-strip" onClick={onConflicts}>
           <span className="conflict-count">{conflicts.length}</span>
           <span className="conflict-text">
             {t('ledger.conflictStrip')}
-            <span className="conflict-sub">{t('ledger.conflictStripHint')}</span>
+            <span className="conflict-sub">
+              {conflicts.length} {t('conflict.count')} · {t('ledger.conflictStripHint')}
+            </span>
           </span>
           <span aria-hidden="true">›</span>
         </button>
@@ -391,21 +413,42 @@ function PersonView({
       {mine.length === 0 ? (
         <p className="muted">{t('ledger.noneForPerson')}</p>
       ) : (
-        <ul className="lies" data-testid="person-lies">
-          {mine.map((lie) => (
-            <li key={lie.id}>
-              <button type="button" className="lie-row" onClick={() => onOpenLie(lie)}>
-                <span className="lie-row-top">
-                  <span className={`badge badge-${lie.status}`}>{t(`status.${lie.status}`)}</span>
-                  <span className="small faint">{formatWhen(lie.createdAt, lang)}</span>
-                </span>
-                <span className="lie-row-text">{lie.text}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="grid-hint">{t('ledger.gridHint')}</p>
+          <ul className="lie-grid" data-testid="person-lies">
+            {mine.map((lie, i) => (
+              <li key={lie.id} className="lie-cell-wrap" style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
+                <div className={`lie-cell st-${lie.status}`}>
+                  <button
+                    type="button"
+                    className="lie-cell-main"
+                    onClick={() => onCycle(lie)}
+                    aria-label={`${t('ledger.cycleAria')}: ${lie.text.slice(0, 40)}`}
+                  >
+                    <span className="lie-cell-top">
+                      <span className={`badge badge-${lie.status}`}>{t(`status.${lie.status}`)}</span>
+                      <span className="lie-cell-date">{formatWhen(lie.createdAt, lang)}</span>
+                    </span>
+                    <span className="lie-cell-text">{lie.text}</span>
+                    <span className="lie-cell-risk">
+                      {t('detail.risk')} {lie.riskScore}/100
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="lie-cell-more"
+                    onClick={() => onOpenLie(lie)}
+                    aria-label={t('ledger.openLie')}
+                  >
+                    ⋯
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
-    </>
+    </div>
   );
 }
 
@@ -425,7 +468,7 @@ function ConflictsView({
   const { t, lang } = useI18n();
 
   return (
-    <div className="conflicts" data-testid="conflicts">
+    <div className="conflicts view-enter" data-testid="conflicts">
       <header className="detail-top">
         <button type="button" className="round" onClick={onBack} aria-label={t('ledger.back')}>
           ‹
@@ -550,42 +593,18 @@ function LieDetail({
   onCopy,
   onCycle,
   onDelete,
-  onNote,
 }: {
   lie: SavedLie;
   onBack: () => void;
   onCopy: () => void;
   onCycle: () => void;
   onDelete: () => void;
-  onNote: (message: string) => void;
 }) {
   const { t, lang } = useI18n();
-  const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [thinking, setThinking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  async function ask() {
-    const clean = question.trim();
-    if (clean.length < 2) return;
-    setThinking(true);
-    setAnswer(null);
-    try {
-      const ai = readAiConfig();
-      if (aiReady(ai)) {
-        setAnswer(await answerWithAi({ lieText: lie.text, question: clean, person: lie.person, lang }, ai));
-      } else {
-        setAnswer(fallbackAnswer(clean, lie.queries ?? [], lie.text, lang));
-      }
-    } catch {
-      setAnswer(fallbackAnswer(clean, lie.queries ?? [], lie.text, lang));
-    } finally {
-      setThinking(false);
-    }
-  }
-
   return (
-    <div className="lie-detail" data-testid="lie-detail">
+    <div className="lie-detail view-enter" data-testid="lie-detail">
       <header className="detail-top">
         <button type="button" className="round" onClick={onBack} aria-label={t('ledger.back')}>
           ‹
@@ -619,37 +638,6 @@ function LieDetail({
           ))}
         </div>
       )}
-
-      <div className="ask-box">
-        <h4>{t('ledger.askTitle')}</h4>
-        <p className="small muted">{t('ledger.askBody')}</p>
-        <input
-          className="input"
-          placeholder={t('ledger.askPlaceholder')}
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void ask();
-          }}
-        />
-        <button type="button" className="cta small-cta" onClick={() => void ask()} disabled={thinking}>
-          {thinking ? t('ledger.asking') : t('ledger.askCta')}
-        </button>
-        {answer && (
-          <div className="answer-box" role="status" data-testid="answer">
-            <p className="answer-text">{answer}</p>
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => {
-                void navigator.clipboard.writeText(answer).then(() => onNote(t('ledger.answerCopied')));
-              }}
-            >
-              {t('ledger.copy')}
-            </button>
-          </div>
-        )}
-      </div>
 
       <div className="detail-actions">
         <button type="button" className="act" onClick={onCopy}>
@@ -691,7 +679,7 @@ function NewLie({
   const [situation, setSituation] = useState<ManualLieInput['situation']>('ozel');
 
   return (
-    <div className="new-lie" data-testid="new-lie">
+    <div className="new-lie view-enter" data-testid="new-lie">
       <header className="detail-top">
         <button type="button" className="round" onClick={onCancel} aria-label={t('new.back')}>
           ‹
@@ -836,7 +824,7 @@ function ProfileEditor({
           : t('profile.close4');
 
   return (
-    <div className="profile-editor" data-testid="profile-editor">
+    <div className="profile-editor view-enter" data-testid="profile-editor">
       <header className="detail-top">
         <button type="button" className="round" onClick={onBack} aria-label={t('profile.back')}>
           ‹

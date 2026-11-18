@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calendar, scorecard, stalePending, streakDays } from '../../src/engine/insights.ts';
+import { calendar, dangerScore, scorecard, stalePending, streakDays } from '../../src/engine/insights.ts';
 
 const DAY = 86_400_000;
 const NOW = new Date(2026, 10, 18, 15, 0, 0).getTime();
@@ -63,6 +63,34 @@ describe('mum serisi', () => {
 
   it('boş defter sıfır', () => {
     expect(streakDays([], NOW)).toBe(0);
+  });
+});
+
+describe('tehlike yüzdesi', () => {
+  it('boş defterde sıfır', () => {
+    expect(dangerScore([])).toMatchObject({ percent: 0, level: 'dusuk' });
+  });
+
+  it('yüksek risk + yakalanan kayıtlar → yüksek', () => {
+    const items = [
+      { id: 'a', text: 'x', situation: 'is_gucu', createdAt: 1, status: 'tutmadı', riskScore: 90 },
+      { id: 'b', text: 'y', situation: 'is_gucu', createdAt: 2, status: 'tutmadı', riskScore: 88 },
+      { id: 'c', text: 'z', situation: 'is_gucu', createdAt: 3, status: 'tuttu', riskScore: 92 },
+    ];
+    const d = dangerScore(items);
+    expect(d.percent).toBeGreaterThan(66);
+    expect(d.level).toBe('yuksek');
+    expect(d.failureRate).toBeCloseTo(0.67, 1);
+  });
+
+  it('tutmuş ve düşük riskli kayıtlar → güvenli', () => {
+    const items = [
+      { id: 'a', text: 'x', situation: 'is_gucu', createdAt: 1, status: 'tuttu', riskScore: 20 },
+      { id: 'b', text: 'y', situation: 'is_gucu', createdAt: 2, status: 'tuttu', riskScore: 22 },
+    ];
+    const d = dangerScore(items);
+    expect(d.level).toBe('dusuk');
+    expect(d.percent).toBeLessThan(34);
   });
 });
 

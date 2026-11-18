@@ -102,6 +102,35 @@ export function streakDays(items: LieLike[], now = Date.now()): number {
   return count;
 }
 
+export type Danger = {
+  /** 0-100 "yalan tehlike yüzdesi". */
+  percent: number;
+  level: 'dusuk' | 'orta' | 'yuksek';
+  /** Kayıtların ortalama risk puanı. */
+  avgRisk: number;
+  /** Yakalanma oranı (tutmadı / değerlendirilen), 0-1. */
+  failureRate: number;
+};
+
+/**
+ * Kişi bazlı tehlike yüzdesi: ortalama risk puanı + yakalanma oranı + kayıt hacmi.
+ * Ağırlıklar: %60 risk, %30 yakalanma, %10 hacim (10 kayıtta doyar). Kayıt yoksa 0.
+ */
+export function dangerScore(items: LieLike[]): Danger {
+  const total = items.length;
+  if (total === 0) return { percent: 0, level: 'dusuk', avgRisk: 0, failureRate: 0 };
+
+  const avgRisk = Math.round(items.reduce((sum, item) => sum + (item.riskScore ?? 40), 0) / total);
+  const failed = items.filter((item) => item.status === 'tutmadı').length;
+  const judged = items.filter((item) => item.status === 'tuttu' || item.status === 'tutmadı').length;
+  const failureRate = judged === 0 ? 0 : failed / judged;
+  const volume = Math.min(1, total / 10);
+
+  const percent = Math.round(Math.min(100, Math.max(0, avgRisk * 0.6 + failureRate * 100 * 0.3 + volume * 100 * 0.1)));
+  const level = percent >= 67 ? 'yuksek' : percent >= 34 ? 'orta' : 'dusuk';
+  return { percent, level, avgRisk, failureRate };
+}
+
 /** Belirtilen saatten uzun süredir "beklemede" olan kayıtlar (yeniden eskiye). */
 export function stalePending(items: LieLike[], hours = 48, now = Date.now()): LieLike[] {
   const limit = hours * 3_600_000;

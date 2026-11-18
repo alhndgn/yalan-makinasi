@@ -31,7 +31,7 @@ export function VariantDetail({ variant, index, total, personLabel, onSave, onRe
   }
 
   return (
-    <section className="screen detail-screen" data-testid="detail">
+    <section className="screen detail-screen view-enter" data-testid="detail">
       <header className="detail-top">
         <button type="button" className="round" onClick={onBack} aria-label={t('detail.back')}>
           ‹

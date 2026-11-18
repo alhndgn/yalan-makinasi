@@ -1,3 +1,14 @@
+## v0.10.0 — 18 Kasım 2026
+
+- **Kişi profili kartı**: fotoğraf eklenebilir avatar (256×256'ya kırpılır, cihazda saklanır), ilişki/samimiyet bilgisi, düzenleme kısayolu.
+- **Tehlike ibresi**: yarım daire ölçek, animasyonlu ibre; yüzde = %60 ortalama risk + %30 yakalanma oranı + %10 kayıt hacmi. Bantlar: güvenli / dikkat / yüksek.
+- **Özet**: kayıt, tuttu, tutmadı, beklemede kutuları + başarı şeridi (oran ve 2/4 gibi pay).
+- **Kutucuk defter**: yalanlar iki sütunlu kart ızgarasında; karta dokun → durum değişir (geri alınabilir), "⋯" → kayıt detayı.
+- **"Cevap hazırla" kaldırıldı** — kayıt detayında artık yalnızca soru provası, kopyala, durum, sil var.
+- **Hareket**: ekran geçişlerinde yumuşak giriş animasyonu, kutucuklarda kademeli (stagger) giriş, basma/hover mikro etkileşimleri; `prefers-reduced-motion` desteği.
+- Çelişki motoru: aynı gün kuralı yalnızca komşu kayıtlarda çalışıyor (5 kayıtta 10 değil 4 çelişki).
+- 185/185 test.
+
 ## v0.9.2 — 18 Kasım 2026
 
 - **APK'da kayıt kaybolması giderildi**: APK sunucu moduyla derlendiğinde `/api` isteği cihazın kendi WebView'ına gidip 404 dönüyordu; kayıt sessizce düşüyordu. Artık native kabuk **her zaman** yerel moda düşüyor (`data.ts` → `isNativeShell()`), ayrıca yeni `scripts/build-android.sh` APK/AAB'yi `VITE_LOCAL_ENGINE=1` ile derliyor.

@@ -73,16 +73,36 @@ describe('Yalan Defteri', () => {
     expect(screen.getByText(/işten çıkamadım/)).toBeInTheDocument();
   });
 
-  it('kayıt detayında "ne diyeyim" cevabı hazırlanır (AI kapalıyken şablon)', async () => {
+  it('kişi ekranında profil kartı, ibre ve kutucuklar görünür', async () => {
     render(<Ledger />);
     await userEvent.click(await screen.findByText('Ayşe'));
-    await userEvent.click(await screen.findByText(/trafik vardı/));
+
+    expect(await screen.findByTestId('profile-card')).toBeInTheDocument();
+    expect(screen.getByTestId('danger-gauge')).toBeInTheDocument();
+    expect(screen.getByTestId('person-lies').querySelectorAll('.lie-cell')).toHaveLength(2);
+  });
+
+  it('kutucuğa dokununca durum bir sonrakine geçer', async () => {
+    render(<Ledger />);
+    await userEvent.click(await screen.findByText('Ayşe'));
+    const cell = (await screen.findByTestId('person-lies')).querySelector('.lie-cell') as HTMLElement;
+    expect(cell.className).toContain('st-beklemede');
+
+    await userEvent.click(cell.querySelector('.lie-cell-main') as HTMLElement);
+
+    await waitFor(() => {
+      const calls = (fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
+      const patchCall = calls.find(([url, init]) => String(url).includes('/api/lies/') && (init?.method ?? 'GET') !== 'GET');
+      expect(patchCall).toBeTruthy();
+    });
+  });
+
+  it('kayıt detayında "cevap hazırla" alanı yok', async () => {
+    render(<Ledger />);
+    await userEvent.click(await screen.findByText('Ayşe'));
+    await userEvent.click(screen.getAllByLabelText(/kaydı aç/i)[0]!);
     expect(await screen.findByTestId('lie-detail')).toBeInTheDocument();
-
-    await userEvent.type(screen.getByPlaceholderText(/kiminleydin/i), 'kiminleydin?');
-    await userEvent.click(screen.getByRole('button', { name: /cevap hazırla/i }));
-
-    expect(await screen.findByTestId('answer')).toHaveTextContent(/annemdeydim/i);
+    expect(screen.queryByText(/cevap hazırla/i)).toBeNull();
   });
 
   it('yeni yalan kaydedince manual ucu çağrılır', async () => {

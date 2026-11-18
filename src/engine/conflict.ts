@@ -13,6 +13,7 @@ export type LieLike = {
   channel?: string;
   createdAt: number;
   status?: string;
+  riskScore?: number;
 };
 
 export type ConflictKind = 'repeat' | 'similar' | 'same_day' | 'detail';
@@ -126,12 +127,14 @@ export function findConflicts(items: LieLike[]): Conflict[] {
         });
       }
 
-      // 3) Aynı gün, iki farklı mazeret
+      // 3) Aynı gün, iki farklı mazeret — yalnızca komşu kayıtlar (aksi hâlde N² çelişki çıkar)
+      const adjacentInDay =
+        j === i + 1 && dayKey(a.createdAt) === dayKey(b.createdAt);
       if (
+        adjacentInDay &&
         a.situation !== 'ozel' &&
         b.situation !== 'ozel' &&
-        a.situation !== b.situation &&
-        dayKey(a.createdAt) === dayKey(b.createdAt)
+        a.situation !== b.situation
       ) {
         push({
           id: `day-${a.id}-${b.id}`,

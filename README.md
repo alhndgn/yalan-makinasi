@@ -13,9 +13,9 @@
   <img src="https://img.shields.io/badge/react-19-d0342c" alt="React 19">
   <img src="https://img.shields.io/badge/node-26-141312" alt="Node 26">
   <img src="https://img.shields.io/badge/platform-android%20%2B%20web-d0342c" alt="Android + web">
-  <img src="https://img.shields.io/badge/test-179%20ge%C3%A7ti-3f8a53" alt="179 test">
+  <img src="https://img.shields.io/badge/test-185%20ge%C3%A7ti-3f8a53" alt="185 test">
   <img src="https://img.shields.io/badge/dil-TR%20%2F%20EN-d0342c" alt="Türkçe + English">
-  <img src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-0.9.1-141312" alt="v0.9.1">
+  <img src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-0.10.0-141312" alt="v0.10.0">
   <a href="https://alhndgn.github.io/yalan-makinasi/"><img src="https://img.shields.io/badge/gizlilik-politikas%C4%B1-6e6a64" alt="Gizlilik"></a>
 </p>
 
@@ -26,7 +26,8 @@
 - **Geçmişi hatırlayan yapay zekâ.** Yeni bahane üretirken aynı kişiye son 5 kaydı okur: aynı bahaneyi tekrar etmez, ayrıntıları (yer/saat/tanık) çelişmez.
 - **Şablon değil, bağlam.** Kime, hangi durumda, hangi kanalda söylediğini bilir; kişi profilindeki samimiyet ve hitap bilgisiyle yazar.
 - **Çelişki ekranı.** Aynı kişiye söylediğin iki kayıt birbirini tutmuyorsa (aynı mazeret, aynı cümle, aynı gün iki farklı bahane, zıt ayrıntı) yan yana gösterir ve nedenini yazar.
-- **Karnesi ve takvimi var.** Kişi bazında tutma oranı, en sık kullanılan bahane; son 30 günün ısı haritası.
+- **Karnesi ve takvimi var.** Kişi kartında fotoğraf, tehlike ibresi, tutma oranı ve en sık kullanılan bahane; son 30 günün ısı haritası.
+- **Kutucuk defter.** Geçmiş yalanlar iki sütunlu kartlarda; karta dokununca durumu değişir, "⋯" ile detaya gidilir.
 - **Risk ölçer.** Her metnin yakalanma riski 0-100 arasında puanlanır ve nedenleri yazılır.
 - **Soru provası.** Karşı tarafın soracağı en olası 3 soru ve **metinle çelişmeyen** cevapları hazırlanır.
 - **Yalan Defteri.** Ne dediğini, tutup tutmadığını kaydeder; 48 saat sonra "tuttu mu?" diye sorar.
@@ -85,6 +86,7 @@
 | **Ne diyeyim?** | kayıtlı yalanın ardından gelen soruya çelişmeyen cevap (AI + şablon yedeği) |
 | **Çelişki** | aynı mazeret / aynı cümle / aynı gün iki bahane / zıt ayrıntı — deterministik motor (`src/engine/conflict.ts`) |
 | **Karne + takvim** | tutma oranı, en sık bahane, son 30 gün ısı haritası |
+| **Profil kartı** | avatar (fotoğraf), tehlike ibresi, kayıt/tuttu/tutmadı/beklemede, başarı şeridi |
 | **Hatırlatma** | 48 saat beklemede kalan kayıt için yerel bildirim (web'de bant) |
 | **Kilit** | 4 haneli PIN, PBKDF2 + salt, 5 yanlışta bekleme, "unuttum" → destek |
 | **Manuel kayıt** | kendi yalanını yaz: kişi, metin, durum, kanal |
@@ -169,6 +171,7 @@ npm test          # 115 test: motor, API, AI istemcisi, arayüz akışı
 - [x] Tek ekran form, sabit doz, kişi profili (hitap + sen/siz)
 - [x] İki dilli arayüz (TR/EN) — dil seçimi ilk açılışta, AI de o dilde yazıyor
 - [x] Çelişki ekranı, kişi karnesi, takvim, akıbet hatırlatması, 4 haneli defter kilidi
+- [x] Kişi profil kartı: avatar, tehlike ibresi, kutucuk defter, ekran geçiş animasyonları
 - [ ] Ana ekran widget'ı (native)
 - [ ] Topluluk akışı (oy, yorum)
 - [ ] Play Store yayını (AI anahtarının sunucuya taşınmasından sonra)
