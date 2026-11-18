@@ -179,7 +179,7 @@ export function Ledger() {
           {reminderCount > 0 && (
             <button type="button" className="remind-banner" data-testid="reminder-banner" onClick={() => setMode('calendar')}>
               <span className="remind-dot" aria-hidden="true" />
-              {t('ledger.reminder', { count: reminderCount })}
+              {reminderCount === 1 ? t('ledger.reminderOne') : t('ledger.reminder', { count: reminderCount })}
             </button>
           )}
 
