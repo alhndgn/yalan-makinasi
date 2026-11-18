@@ -1,3 +1,10 @@
+## v0.9.2 — 18 Kasım 2026
+
+- **APK'da kayıt kaybolması giderildi**: APK sunucu moduyla derlendiğinde `/api` isteği cihazın kendi WebView'ına gidip 404 dönüyordu; kayıt sessizce düşüyordu. Artık native kabuk **her zaman** yerel moda düşüyor (`data.ts` → `isNativeShell()`), ayrıca yeni `scripts/build-android.sh` APK/AAB'yi `VITE_LOCAL_ENGINE=1` ile derliyor.
+- **Kayıt hatası görünür**: `saveLie` başarısız olursa toast 4 sn boyunca "Kaydedilemedi, tekrar dene." gösteriyor (öncesinde kısa süreli geçiyordu).
+- **Yenile gerçekten sıfırlıyor**: üretim ekranına dönüşte kişi/durum/ipucu alanları, sonuçlar ve uyarılar temizleniyor.
+- 180/180 test.
+
 ## v0.9.1 — 18 Kasım 2026
 
 - **Üret düğmesi kaybolmuyor**: form gövdesi artık kaydırılabilir bir alanda (`gen-scroll`), "Üret" düğmesi sabit; klavye açılınca (dar ekran) da görünür kalıyor.

@@ -120,8 +120,10 @@ describe('üretim akışı: yüklenme → deste → tam ekran', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^yenile$/i }));
 
-    // Yeni istek atılmaz; kullanıcı ilk ekrana (forma) döner.
-    expect(await screen.findByLabelText('Ne oldu?')).toBeInTheDocument();
+    // Yeni istek atılmaz; kullanıcı ilk ekrana (boş forma) döner.
+    const what = (await screen.findByLabelText('Ne oldu?')) as HTMLTextAreaElement;
+    expect(what.value).toBe('');
+    expect((screen.getByLabelText('Kimin için?') as HTMLInputElement).value).toBe('');
     expect(screen.queryByTestId('detail')).toBeNull();
     const calls = (fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
     expect(calls.filter(([url]) => String(url).includes('/api/generate'))).toHaveLength(1);

@@ -133,9 +133,12 @@ export function Generator({ onGenerated }: Props) {
       notifyDataChanged();
       void refreshPeople();
       setSavedNote(t('ledger.added'));
-      setTimeout(() => setSavedNote(null), 2200);
-    } catch {
+      setTimeout(() => setSavedNote(null), 2600);
+    } catch (err) {
+      // Sessiz yutma: kaydedilemediyse kullanıcı bunu görmeli.
+      console.error('saveLie failed', err);
       setSavedNote(t('ledger.saveFailed'));
+      setTimeout(() => setSavedNote(null), 4000);
     }
   }
 
@@ -166,10 +169,17 @@ export function Generator({ onGenerated }: Props) {
         personLabel={usedPerson}
         onSave={() => void saveVariant(variants[index]!)}
         onRegenerate={() => {
-          // "Yenile" = baştan başla: üretim ekranına dön (form korunur).
+          // "Yenile" = baştan başla: ekranı ve formu sıfırla.
           setView('form');
           setVariants([]);
           setIndex(0);
+          setUsedPerson('');
+          setPerson('');
+          setSituationText('');
+          setHint('');
+          setError(null);
+          setSavedNote(null);
+          setRepeat(null);
         }}
         onBack={() => setView('deck')}
         note={savedNote}
