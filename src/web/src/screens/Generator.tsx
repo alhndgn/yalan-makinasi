@@ -8,6 +8,7 @@ import { YalanMark } from '../components/YalanMark.tsx';
 import { ApiError } from '../lib/api.ts';
 import { data } from '../lib/data.ts';
 import { readDefaults } from '../lib/defaults.ts';
+import { notifyDataChanged } from '../lib/events.ts';
 import { useI18n } from '../lib/lang.tsx';
 import { repeatWarning } from '../lib/personView.ts';
 
@@ -40,6 +41,7 @@ export function Generator({ onGenerated }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
   const [provider, setProvider] = useState<string>('template');
+  const [startedAt, setStartedAt] = useState<number>(() => Date.now());
 
   async function refreshPeople() {
     try {
@@ -80,6 +82,7 @@ export function Generator({ onGenerated }: Props) {
   async function generate() {
     setError(null);
     setSavedNote(null);
+    setStartedAt(Date.now());
     setView('loading');
     const request: GenerateRequest = {
       person: person.trim(),
@@ -127,6 +130,8 @@ export function Generator({ onGenerated }: Props) {
         },
         provider,
       });
+      notifyDataChanged();
+      void refreshPeople();
       setSavedNote(t('ledger.added'));
       setTimeout(() => setSavedNote(null), 2200);
     } catch {
@@ -136,7 +141,7 @@ export function Generator({ onGenerated }: Props) {
 
   const ready = situationText.trim().length >= 3;
 
-  if (view === 'loading') return <GeneratingScreen />;
+  if (view === 'loading') return <GeneratingScreen startedAt={startedAt} />;
 
   if (view === 'deck' && variants.length > 0) {
     return (
@@ -160,7 +165,12 @@ export function Generator({ onGenerated }: Props) {
         total={variants.length}
         personLabel={usedPerson}
         onSave={() => void saveVariant(variants[index]!)}
-        onRegenerate={() => void generate()}
+        onRegenerate={() => {
+          // "Yenile" = baştan başla: üretim ekranına dön (form korunur).
+          setView('form');
+          setVariants([]);
+          setIndex(0);
+        }}
         onBack={() => setView('deck')}
         note={savedNote}
       />
@@ -179,6 +189,7 @@ export function Generator({ onGenerated }: Props) {
         </button>
       </header>
 
+      <div className="gen-scroll">
       <div className="card form-card">
         <label className="field-label" htmlFor="who">
           {t('gen.who')}
@@ -297,6 +308,8 @@ export function Generator({ onGenerated }: Props) {
           </div>
         </div>
       )}
+
+      </div>
 
       {error && (
         <p className="alert" role="alert">

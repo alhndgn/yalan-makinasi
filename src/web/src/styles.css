@@ -320,7 +320,8 @@
 .person-hint { margin: 8px 0 0; }
 
 /* ---------- tek ekran form ---------- */
-.gen-form { height: calc(100vh - 122px); display: flex; flex-direction: column; gap: 10px; }
+.gen-form { height: calc(100vh - 122px); display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.gen-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 1px 1px 4px; }
 @supports (height: 100dvh) { .gen-form { height: calc(100dvh - 122px); } }
 .gen-form .brandbar { margin-bottom: 4px; }
 .form-card { padding: 13px 15px; margin: 0; }
@@ -334,7 +335,7 @@
 .gauge-card { padding: 6px 12px 10px; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
 .gauge { width: 100%; }
 .advanced-card { padding: 12px 15px; }
-.gen-cta { margin-top: auto; margin-bottom: 2px; }
+.gen-cta { flex: 0 0 auto; margin-top: 0; margin-bottom: 2px; }
 
 /* ---------- ibre ---------- */
 .gauge { display: flex; flex-direction: column; align-items: center; }

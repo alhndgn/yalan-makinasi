@@ -11,6 +11,7 @@ import { data } from '../lib/data.ts';
 import { formatWhen } from '../lib/format.ts';
 import { sourceLabel } from '../lib/personView.ts';
 import { useI18n } from '../lib/lang.tsx';
+import { onDataChanged, notifyDataChanged } from '../lib/events.ts';
 import { pendingReminderCount, syncReminders } from '../lib/reminder.ts';
 
 type View =
@@ -48,6 +49,10 @@ export function Ledger() {
 
   useEffect(() => {
     void refreshAll();
+    // Üretici sekmesinde kaydedilen yalan burada anında görünsün.
+    return onDataChanged(() => {
+      void refreshAll();
+    });
   }, []);
 
   // Bildirimler: native'de 48 saat sonrası için zamanlanır, web'de bant gösterilir.
@@ -71,7 +76,7 @@ export function Ledger() {
     setLies((prev) => prev.map((item) => (item.id === lie.id ? { ...item, status: next } : item)));
     try {
       await data.updateStatus(lie.id, next);
-      await refreshAll();
+      notifyDataChanged();
     } catch {
       flash(t('ledger.statusFailed'));
     }
@@ -81,7 +86,7 @@ export function Ledger() {
     const person = view.kind === 'lie' ? (view.lie.person ?? '') : '';
     await data.deleteLie(id).catch(() => null);
     setLies((prev) => prev.filter((item) => item.id !== id));
-    await refreshAll();
+    notifyDataChanged();
     setView(person ? { kind: 'person', person } : { kind: 'people' });
     flash(t('ledger.deleted'));
   }
@@ -100,6 +105,7 @@ export function Ledger() {
     try {
       await data.saveManual(input);
       await refreshAll();
+      notifyDataChanged();
       setView({ kind: 'person', person: input.person.trim() });
       flash(t('ledger.added'));
     } catch {

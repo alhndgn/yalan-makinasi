@@ -1,3 +1,10 @@
+## v0.9.1 — 18 Kasım 2026
+
+- **Üret düğmesi kaybolmuyor**: form gövdesi artık kaydırılabilir bir alanda (`gen-scroll`), "Üret" düğmesi sabit; klavye açılınca (dar ekran) da görünür kalıyor.
+- **Yükleme ilerlemesi kaldığı yerden devam ediyor**: adımlar ve ilerleme çubuğu CSS animasyonu yerine `startedAt` zaman damgasından hesaplanıyor — sekme değiştirip dönünce baştan başlamıyor.
+- **Kaydedilen yalan deftere anında düşüyor**: sekmeler açık tutulduğu için defter eski hâlini gösteriyordu; `ym:changed` olayı ile sekmeler arası tazeleme eklendi.
+- **Yenile düğmesi üretim ekranına dönüyor** (formdaki bilgiler korunarak), aynı yalanı tekrar üretmiyor.
+
 ## v0.9.0 — 18 Kasım 2026
 
 - **Çelişki motoru** (`src/engine/conflict.ts`): aynı mazeretin tekrarı, neredeyse aynı cümle, aynı gün iki farklı mazeret, zıt ayrıntı (hasta ↔ şehir dışında). AI'sız, deterministik; kişi kartındaki kırmızı nokta artık çelişki ekranını açıyor.

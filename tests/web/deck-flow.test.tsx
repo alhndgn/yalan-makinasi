@@ -112,18 +112,18 @@ describe('üretim akışı: yüklenme → deste → tam ekran', () => {
     expect(await screen.findByText(/deftere eklendi/i)).toBeInTheDocument();
   });
 
-  it('yenile yeni üretim isteği atar', async () => {
+  it('yenile üretim ekranına döner, formdaki bilgiler korunur', async () => {
     render(<Generator onGenerated={() => {}} />);
     await goToDeck();
     await userEvent.click(screen.getByRole('button', { name: /bunu kullan/i }));
     await screen.findByTestId('detail');
 
     await userEvent.click(screen.getByRole('button', { name: /^yenile$/i }));
-    await waitFor(() => {
-      const calls = (fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
-      const generateCalls = calls.filter(([url]) => String(url).includes('/api/generate'));
-      expect(generateCalls.length).toBeGreaterThanOrEqual(2);
-    });
-    expect(await screen.findByTestId('deck')).toBeInTheDocument();
+
+    // Yeni istek atılmaz; kullanıcı ilk ekrana (forma) döner.
+    expect(await screen.findByLabelText('Ne oldu?')).toBeInTheDocument();
+    expect(screen.queryByTestId('detail')).toBeNull();
+    const calls = (fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
+    expect(calls.filter(([url]) => String(url).includes('/api/generate'))).toHaveLength(1);
   });
 });
